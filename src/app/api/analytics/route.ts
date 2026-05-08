@@ -1,5 +1,11 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import type { Prisma } from '@prisma/client';
+
+type DealYTD = Prisma.DealGetPayload<{
+  include: { service: { select: { id: true; nama: true; colorHex: true } }; client: { select: { sourceId: true } } }
+}>;
+type DealStageOnly = Prisma.DealGetPayload<{ select: { stageId: true; dealStatus: true } }>;
 
 export async function GET() {
   try {
@@ -14,17 +20,17 @@ export async function GET() {
     });
 
     const totalDealsYTD = dealsYTD.length;
-    const wonDealsYTD = dealsYTD.filter((d) => d.dealStatus === 'won');
+    const wonDealsYTD = dealsYTD.filter((d: DealYTD) => d.dealStatus === 'won');
     const wonCount = wonDealsYTD.length;
-    const lostDealsYTD = dealsYTD.filter((d) => d.dealStatus === 'lost');
-    const sumNilaiWon = wonDealsYTD.reduce((s, d) => s + d.nilai, 0);
+    const lostDealsYTD = dealsYTD.filter((d: DealYTD) => d.dealStatus === 'lost');
+    const sumNilaiWon = wonDealsYTD.reduce((s: number, d: DealYTD) => s + d.nilai, 0);
     const avgDealSize = wonCount > 0 ? sumNilaiWon / wonCount : 0;
     const winRate = totalDealsYTD > 0 ? (wonCount / totalDealsYTD) * 100 : 0;
 
     // Avg close time (days from tanggalMasuk to... we'll use days between created and now for won, or just estimate)
     let avgCloseTime = 0;
     if (wonCount > 0) {
-      const totalDays = wonDealsYTD.reduce((s, d) => {
+      const totalDays = wonDealsYTD.reduce((s: number, d: DealYTD) => {
         const diff = now.getTime() - d.tanggalMasuk.getTime();
         return s + Math.ceil(diff / (1000 * 60 * 60 * 24));
       }, 0);
@@ -44,7 +50,7 @@ export async function GET() {
       revenueByMonth[key] = 0;
     }
     let ytdRevenue = 0;
-    for (const inv of paidInvoices) {
+    for (const inv of paidInvoices as { nominal: number; tanggalTerbit: Date }[]) {
       const m = inv.tanggalTerbit.getMonth();
       const y = inv.tanggalTerbit.getFullYear();
       if (y === year) {
@@ -83,13 +89,13 @@ export async function GET() {
     });
     const totalLeads = await prisma.lead.count();
     const funnel: { stage: string; count: number; color: string }[] = [];
-    for (const s of stages) {
+    for (const s of stages as { id: string; nama: string; urutan: number; probabilityDefault: number; colorHex: string; isTerminal: boolean }[]) {
       if (s.isTerminal && s.nama === 'Won') {
         funnel.push({ stage: 'Deal Won', count: wonCount, color: '#16A34A' });
       } else if (s.isTerminal && s.nama === 'Lost') {
         funnel.push({ stage: 'Lost', count: lostDealsYTD.length, color: '#94A3B8' });
       } else {
-        const count = allDealsWithStage.filter((d) => d.stageId === s.id).length;
+        const count = allDealsWithStage.filter((d: DealStageOnly) => d.stageId === s.id).length;
         funnel.push({ stage: s.nama, count, color: s.colorHex });
       }
     }
@@ -98,7 +104,7 @@ export async function GET() {
     if (stages.length > 0 && stages[0].nama === 'Lead') {
       // Replace the "Lead" in funnel with actual lead count + deal lead count
       const leadStageId = stages[0].id;
-      const dealLeadCount = allDealsWithStage.filter((d) => d.stageId === leadStageId).length;
+      const dealLeadCount = allDealsWithStage.filter((d: DealStageOnly) => d.stageId === leadStageId).length;
       funnel[0] = { ...funnel[0], count: totalLeads + dealLeadCount };
     }
 
@@ -122,24 +128,24 @@ export async function GET() {
 
     // ── Revenue per service ──────────────────────────────────
     const services = await prisma.service.findMany({ where: { isActive: true } });
-    const revenuePerService = services.map((svc) => {
-      const svcDeals = wonDealsYTD.filter((d) => d.serviceId === svc.id);
-      const total = svcDeals.reduce((s, d) => s + d.nilai, 0);
+    const revenuePerService = services.map((svc: { id: string; nama: string; deskripsi: string | null; colorHex: string; isActive: boolean; createdAt: Date }) => {
+      const svcDeals = wonDealsYTD.filter((d: DealYTD) => d.serviceId === svc.id);
+      const total = svcDeals.reduce((s: number, d: DealYTD) => s + d.nilai, 0);
       const maxRevenue = sumNilaiWon || 1;
       return { service: svc.nama, total, pct: Math.round((total / maxRevenue) * 100), colorHex: svc.colorHex };
     }).sort((a, b) => b.total - a.total);
 
     // ── Lead source analysis ──────────────────────────────────
     const leadSources = await prisma.leadSource.findMany();
-    const sourceAnalysis = await Promise.all(leadSources.map(async (src) => {
-      const srcDeals = dealsYTD.filter((d) => d.client?.sourceId === src.id);
-      const srcWon = srcDeals.filter((d) => d.dealStatus === 'won');
-      const totalVal = srcDeals.reduce((s, d) => s + d.nilai, 0);
+    const sourceAnalysis = await Promise.all(leadSources.map(async (src: { id: string; nama: string; isActive: boolean }) => {
+      const srcDeals = dealsYTD.filter((d: DealYTD) => d.client?.sourceId === src.id);
+      const srcWon = srcDeals.filter((d: DealYTD) => d.dealStatus === 'won');
+      const totalVal = srcDeals.reduce((s: number, d: DealYTD) => s + d.nilai, 0);
       const srcWinRate = srcDeals.length > 0 ? (srcWon.length / srcDeals.length) * 100 : 0;
-      const avgVal = srcWon.length > 0 ? srcWon.reduce((s, d) => s + d.nilai, 0) / srcWon.length : 0;
-      const maxTotal = Math.max(...(await Promise.all(leadSources.map(async (s) => {
-        const sd = dealsYTD.filter((d) => d.client?.sourceId === s.id);
-        return sd.reduce((sum, d) => sum + d.nilai, 0);
+      const avgVal = srcWon.length > 0 ? srcWon.reduce((s: number, d: DealYTD) => s + d.nilai, 0) / srcWon.length : 0;
+      const maxTotal = Math.max(...(await Promise.all(leadSources.map(async (s: { id: string; nama: string; isActive: boolean }) => {
+        const sd = dealsYTD.filter((d: DealYTD) => d.client?.sourceId === s.id);
+        return sd.reduce((sum: number, d: DealYTD) => sum + d.nilai, 0);
       }))), 1);
       return {
         source: src.nama,
@@ -150,7 +156,7 @@ export async function GET() {
         pct: Math.round((totalVal / maxTotal) * 100),
         isBest: srcWinRate >= 60 && srcDeals.length >= 2,
       };
-    })).then((arr) => arr.sort((a, b) => b.totalValue - a.totalValue));
+    })).then((arr: { source: string; dealCount: number; totalValue: number; winRate: number; avgDealValue: number; pct: number; isBest: boolean }[]) => arr.sort((a, b) => b.totalValue - a.totalValue));
 
     return NextResponse.json({
       dealStats: {
