@@ -137,7 +137,7 @@ export async function GET() {
       const total = svcDeals.reduce((s: number, d: DealYTD) => s + d.nilai, 0);
       const maxRevenue = sumNilaiWon || 1;
       return { service: svc.nama, total, pct: Math.round((total / maxRevenue) * 100), colorHex: svc.colorHex };
-    }).sort((a, b) => b.total - a.total);
+    }).sort((a: { service: string; total: number; pct: number; colorHex: string }, b: { service: string; total: number; pct: number; colorHex: string }) => b.total - a.total);
 
     // ── Lead source analysis ──────────────────────────────────
     const leadSources = await prisma.leadSource.findMany();
