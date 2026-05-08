@@ -91,7 +91,7 @@ export async function GET(req: Request) {
     // Build calendar events
     const calEvents: Record<string, string[]> = {};
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    monthActivities.forEach((a) => {
+    monthActivities.forEach((a: { tanggalAktivitas: Date; isDone: boolean; nextActionDate: Date | null }) => {
       const d = a.tanggalAktivitas;
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       if (!calEvents[key]) calEvents[key] = [];
