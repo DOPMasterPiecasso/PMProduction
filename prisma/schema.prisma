@@ -129,10 +129,10 @@ model Client {
   email         String?
   sourceId      String?
   serviceId     String?
-  tags          String?  // comma-separated
+  tags          String?  @db.Text // comma-separated
   status        String   @default("unqualified") // unqualified | qualified | ongoing | closed
   nextFuDate    DateTime?
-  catatan       String?
+  catatan       String?    @db.Text
   createdById   String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -161,7 +161,7 @@ model Lead {
   assignedToId   String?
   status         String   @default("baru") // baru | dihubungi | qualified | unqualified
   tanggalMasuk   DateTime @default(now())
-  catatan        String?
+  catatan        String?  @db.Text
   clientId       String?  // set when saved to DB client
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -187,8 +187,8 @@ model Deal {
   isHot        Boolean  @default(false)
   tanggalMasuk DateTime @default(now())
   deadline     DateTime?
-  notes        String?
-  lostReason   String?
+  notes        String?  @db.Text
+  lostReason   String?  @db.Text
   dealStatus   String   @default("active") // active | won | lost | archived
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -208,10 +208,10 @@ model Deal {
 model DealDocument {
   id           String   @id @default(cuid())
   dealId       String
-  fileName     String
+  fileName     String   @db.Text
   fileType     String?  // PDF, DOC, IMG, PPT
   fileSizeBytes Int?
-  fileUrl      String?
+  fileUrl      String?  @db.Text
   uploadedById String?
   uploadedAt   DateTime @default(now())
 
@@ -229,8 +229,8 @@ model Activity {
   typeId           String?
   picId            String?
   tanggalAktivitas DateTime
-  catatan          String?
-  nextAction       String?
+  catatan          String?  @db.Text
+  nextAction       String?  @db.Text
   nextActionDate   DateTime?
   isDone           Boolean  @default(false)
   fileUrl          String?
@@ -257,7 +257,7 @@ model Invoice {
   tanggalTerbit DateTime @default(now())
   jatuhTempo    DateTime
   status        String   @default("unpaid") // unpaid | partial | paid | overdue
-  keterangan    String?
+  keterangan    String?  @db.Text
   paidAmount    Float?   @default(0)
   createdById   String?
   createdAt     DateTime @default(now())
