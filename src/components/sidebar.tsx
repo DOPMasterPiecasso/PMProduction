@@ -176,7 +176,7 @@ export function Sidebar() {
           <div className="text-[10px] text-[#A0A0A8]">Owner</div>
         </div>
         <button
-          onClick={() => signOut({ callbackUrl: "/login" })}
+          onClick={() => signOut({ callbackUrl: window.location.origin + "/login" })}
           className="text-[11px] text-[#A0A0A8] hover:text-[#B91C1C] transition-colors"
           title="Logout"
         >
