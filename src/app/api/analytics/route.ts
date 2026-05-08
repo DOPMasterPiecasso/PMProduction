@@ -1,11 +1,15 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import type { Prisma } from '@prisma/client';
 
-type DealYTD = Prisma.DealGetPayload<{
-  include: { service: { select: { id: true; nama: true; colorHex: true } }; client: { select: { sourceId: true } } }
-}>;
-type DealStageOnly = Prisma.DealGetPayload<{ select: { stageId: true; dealStatus: true } }>;
+type DealYTD = {
+  id: string; clientId: string; serviceId: string | null; assignedAeId: string | null;
+  stageId: string | null; nilai: number; namaProject: string | null; probability: number;
+  isHot: boolean; tanggalMasuk: Date; deadline: Date | null; notes: string | null;
+  lostReason: string | null; dealStatus: string; createdAt: Date; updatedAt: Date;
+  service: { id: string; nama: string; colorHex: string } | null;
+  client: { sourceId: string | null } | null;
+};
+type DealStageOnly = { stageId: string | null; dealStatus: string };
 
 export async function GET() {
   try {
