@@ -1,0 +1,288 @@
+// CreativeOS v3 - Prisma Schema (PostgreSQL)
+generator client {
+  provider        = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── MASTER TABLES ──────────────────────────────────────────
+
+model User {
+  id            String   @id @default(cuid())
+  nama          String
+  email         String   @unique
+  password      String
+  role          String   @default("ae") // owner | manager | ae | editor | admin
+  avatarInitial String?
+  avatarColor   String?  @default("#18181B")
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  leads         Lead[]       @relation("AssignedLeads")
+  deals         Deal[]       @relation("AssignedDeals")
+  activities    Activity[]   @relation("ActivityPIC")
+  uploadedFiles DealDocument[]
+  kpiTargets    KpiTarget[]
+  createdClients Client[]
+  createdInvoices Invoice[]
+
+  @@map("users")
+}
+
+model Service {
+  id          String   @id @default(cuid())
+  nama        String   @unique
+  deskripsi   String?
+  colorHex    String   @default("#2563EB")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  // Relations
+  leads    Lead[]
+  deals    Deal[]
+  clients  Client[]
+
+  @@map("services")
+}
+
+model LeadSource {
+  id       String  @id @default(cuid())
+  nama     String  @unique
+  isActive Boolean @default(true)
+
+  // Relations
+  leads   Lead[]
+  clients Client[]
+
+  @@map("lead_sources")
+}
+
+model ClientType {
+  id   String @id @default(cuid())
+  nama String @unique
+
+  // Relations
+  clients Client[]
+
+  @@map("client_types")
+}
+
+model City {
+  id       String @id @default(cuid())
+  nama     String
+  provinsi String?
+
+  // Relations
+  clients Client[]
+
+  @@map("cities")
+}
+
+model PipelineStage {
+  id                 String  @id @default(cuid())
+  nama               String  @unique
+  urutan             Int
+  probabilityDefault Int     @default(50) // percentage
+  colorHex           String  @default("#6B7280")
+  isTerminal         Boolean @default(false) // Won/Lost = true
+
+  // Relations
+  deals Deal[]
+
+  @@map("pipeline_stages")
+}
+
+model ActivityType {
+  id       String @id @default(cuid())
+  nama     String @unique
+  colorHex String @default("#2563EB")
+  icon     String?
+
+  // Relations
+  activities Activity[]
+
+  @@map("activity_types")
+}
+
+model SystemSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("system_settings")
+}
+
+// ─── TRANSACTION TABLES ─────────────────────────────────────
+
+model Client {
+  id            String   @id @default(cuid())
+  namaKlien     String
+  clientTypeId  String?
+  kotaId        String?
+  namaContact   String?
+  noHp          String?
+  email         String?
+  sourceId      String?
+  serviceId     String?
+  tags          String?  // comma-separated
+  status        String   @default("unqualified") // unqualified | qualified | ongoing | closed
+  nextFuDate    DateTime?
+  catatan       String?
+  createdById   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  clientType  ClientType?  @relation(fields: [clientTypeId], references: [id])
+  kota        City?        @relation(fields: [kotaId], references: [id])
+  source      LeadSource?  @relation(fields: [sourceId], references: [id])
+  service     Service?     @relation(fields: [serviceId], references: [id])
+  createdBy   User?        @relation(fields: [createdById], references: [id])
+  leads       Lead[]
+  deals       Deal[]
+  activities  Activity[]
+  invoices    Invoice[]
+
+  @@map("clients")
+}
+
+model Lead {
+  id             String   @id @default(cuid())
+  namaInstitusi  String
+  namaContact    String?
+  noHp           String?
+  sourceId       String?
+  serviceId      String?
+  assignedToId   String?
+  status         String   @default("baru") // baru | dihubungi | qualified | unqualified
+  tanggalMasuk   DateTime @default(now())
+  catatan        String?
+  clientId       String?  // set when saved to DB client
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  source      LeadSource? @relation(fields: [sourceId], references: [id])
+  service     Service?    @relation(fields: [serviceId], references: [id])
+  assignedTo  User?       @relation("AssignedLeads", fields: [assignedToId], references: [id])
+  client      Client?     @relation(fields: [clientId], references: [id])
+
+  @@map("leads")
+}
+
+model Deal {
+  id           String   @id @default(cuid())
+  clientId     String
+  serviceId    String?
+  assignedAeId String?
+  stageId      String?
+  nilai        Float    @default(0) // Rupiah
+  namaProject  String?
+  probability  Int      @default(50) // percentage
+  isHot        Boolean  @default(false)
+  tanggalMasuk DateTime @default(now())
+  deadline     DateTime?
+  notes        String?
+  lostReason   String?
+  dealStatus   String   @default("active") // active | won | lost | archived
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  client     Client        @relation(fields: [clientId], references: [id])
+  service    Service?      @relation(fields: [serviceId], references: [id])
+  assignedAe User?         @relation("AssignedDeals", fields: [assignedAeId], references: [id])
+  stage      PipelineStage? @relation(fields: [stageId], references: [id])
+  documents  DealDocument[]
+  activities Activity[]
+  invoices   Invoice[]
+
+  @@map("deals")
+}
+
+model DealDocument {
+  id           String   @id @default(cuid())
+  dealId       String
+  fileName     String
+  fileType     String?  // PDF, DOC, IMG, PPT
+  fileSizeBytes Int?
+  fileUrl      String?
+  uploadedById String?
+  uploadedAt   DateTime @default(now())
+
+  // Relations
+  deal       Deal  @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  uploadedBy User? @relation(fields: [uploadedById], references: [id])
+
+  @@map("deal_documents")
+}
+
+model Activity {
+  id               String   @id @default(cuid())
+  dealId           String?
+  clientId         String?
+  typeId           String?
+  picId            String?
+  tanggalAktivitas DateTime
+  catatan          String?
+  nextAction       String?
+  nextActionDate   DateTime?
+  isDone           Boolean  @default(false)
+  fileUrl          String?
+  fileName         String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relations
+  deal   Deal?         @relation(fields: [dealId], references: [id])
+  client Client?       @relation(fields: [clientId], references: [id])
+  type   ActivityType? @relation(fields: [typeId], references: [id])
+  pic    User?         @relation("ActivityPIC", fields: [picId], references: [id])
+
+  @@map("activities")
+}
+
+model Invoice {
+  id            String   @id @default(cuid())
+  clientId      String
+  dealId        String?
+  nomorInvoice  String   @unique
+  namaProject   String?
+  nominal       Float
+  tanggalTerbit DateTime @default(now())
+  jatuhTempo    DateTime
+  status        String   @default("unpaid") // unpaid | partial | paid | overdue
+  keterangan    String?
+  paidAmount    Float?   @default(0)
+  createdById   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  client    Client @relation(fields: [clientId], references: [id])
+  deal      Deal?  @relation(fields: [dealId], references: [id])
+  createdBy User?  @relation(fields: [createdById], references: [id])
+
+  @@map("invoices")
+}
+
+model KpiTarget {
+  id            String   @id @default(cuid())
+  userId        String
+  bulan         String   // format: YYYY-MM
+  targetDeals   Int      @default(10)
+  targetRevenue Float    @default(100000000)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, bulan])
+  @@map("kpi_targets")
+}
