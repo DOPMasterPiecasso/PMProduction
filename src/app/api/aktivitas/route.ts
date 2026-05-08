@@ -15,8 +15,8 @@ export async function GET(req: Request) {
 
     if (search) {
       where.OR = [
-        { catatan: { contains: search, mode: 'insensitive' } },
-        { client: { namaKlien: { contains: search, mode: 'insensitive' } } },
+        { catatan: { contains: search } },
+        { client: { namaKlien: { contains: search } } },
       ];
     }
     if (typeId) where.typeId = typeId;

@@ -12,7 +12,7 @@ export async function GET(req: Request) {
     where.dealStatus = { not: 'archived' };
 
     if (search) {
-      where.client = { namaKlien: { contains: search, mode: 'insensitive' } };
+      where.client = { namaKlien: { contains: search } };
     }
     if (serviceId) where.serviceId = serviceId;
 
@@ -31,12 +31,12 @@ export async function GET(req: Request) {
     // Monthly aggregation for chart
     const monthlyAgg = await prisma.$queryRaw<{ bulan: string; total: number; count: bigint }[]>`
       SELECT
-        TO_CHAR("tanggalMasuk", 'YYYY-MM') as bulan,
+        DATE_FORMAT(tanggalMasuk, '%Y-%m') as bulan,
         SUM(nilai) as total,
         COUNT(*) as count
       FROM deals
-      WHERE "dealStatus" IN ('won', 'active')
-        AND "tanggalMasuk" >= NOW() - INTERVAL '12 months'
+      WHERE dealStatus IN ('won', 'active')
+        AND tanggalMasuk >= NOW() - INTERVAL 12 MONTH
       GROUP BY bulan
       ORDER BY bulan ASC
     `;

@@ -10,8 +10,8 @@ export async function GET(req: Request) {
       where: search
         ? {
             OR: [
-              { namaInstitusi: { contains: search, mode: 'insensitive' } },
-              { namaContact: { contains: search, mode: 'insensitive' } },
+              { namaInstitusi: { contains: search } },
+              { namaContact: { contains: search } },
             ],
           }
         : undefined,

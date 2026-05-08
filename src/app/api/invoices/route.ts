@@ -9,9 +9,9 @@ export async function GET(req: Request) {
     const where: Record<string, unknown> = {};
     if (search) {
       where.OR = [
-        { client: { namaKlien: { contains: search, mode: 'insensitive' } } },
-        { nomorInvoice: { contains: search, mode: 'insensitive' } },
-        { namaProject: { contains: search, mode: 'insensitive' } },
+        { client: { namaKlien: { contains: search } } },
+        { nomorInvoice: { contains: search } },
+        { namaProject: { contains: search } },
       ];
     }
 

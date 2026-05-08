@@ -14,7 +14,7 @@ export async function GET(req: Request) {
     const clients = await prisma.client.findMany({
       where: {
         AND: [
-          search ? { namaKlien: { contains: search, mode: 'insensitive' } } : {},
+          search ? { namaKlien: { contains: search } } : {},
           status ? { status } : {},
           type ? { clientType: { nama: type } } : {},
           kota ? { kota: { nama: kota } } : {},

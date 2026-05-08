@@ -1,11 +1,22 @@
 import { PrismaClient } from '@prisma/client';
-import { Pool } from 'pg';
-import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaMariaDb } from '@prisma/adapter-mariadb';
 
 const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const adapter = new PrismaPg(pool);
+function getDbUrl() {
+  const url = process.env.DATABASE_URL || 'mysql://localhost:3306/creativeos';
+  const parsed = new URL(url);
+  return {
+    host: parsed.hostname,
+    port: parseInt(parsed.port) || 3306,
+    user: decodeURIComponent(parsed.username),
+    password: decodeURIComponent(parsed.password),
+    database: parsed.pathname.replace(/^\//, ''),
+  };
+}
+
+const { host, port, user, password, database } = getDbUrl();
+const adapter = new PrismaMariaDb({ host, port, user, password, database });
 
 export const prisma = globalForPrisma.prisma || new PrismaClient({ adapter });
 
