@@ -28,7 +28,7 @@ export async function GET(req: Request) {
     const kpiTargets = await prisma.kpiTarget.findMany({
       where: { bulan },
     });
-    const targetMap = new Map(kpiTargets.map((t: { userId: string; targetDeals: number; targetRevenue: number }) => [t.userId, t]));
+    const targetMap = new Map<string, { targetDeals: number; targetRevenue: number }>(kpiTargets.map((t: { userId: string; targetDeals: number; targetRevenue: number }) => [t.userId, t]));
 
     const now = new Date();
     const teamData = await Promise.all(users.map(async (user: { id: string; nama: string; email: string; password: string; role: string; avatarInitial: string | null; avatarColor: string | null; isActive: boolean; createdAt: Date; updatedAt: Date }) => {
