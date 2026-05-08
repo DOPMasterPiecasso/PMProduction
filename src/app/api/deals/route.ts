@@ -41,7 +41,7 @@ export async function GET(req: Request) {
       ORDER BY bulan ASC
     `;
 
-    const monthlyData = monthlyAgg.map((r) => ({
+    const monthlyData = monthlyAgg.map((r: { bulan: string; total: number; count: bigint }) => ({
       bulan: r.bulan,
       total: Number(r.total),
       count: Number(r.count),
@@ -53,8 +53,8 @@ export async function GET(req: Request) {
     ]);
 
     // Stats
-    const totalNilai = deals.reduce((sum, d) => sum + d.nilai, 0);
-    const wonDeals = deals.filter((d) => d.dealStatus === 'won');
+    const totalNilai = deals.reduce((sum: number, d: { id: string; clientId: string; serviceId: string | null; assignedAeId: string | null; stageId: string | null; nilai: number; namaProject: string | null; probability: number; isHot: boolean; tanggalMasuk: Date; deadline: Date | null; notes: string | null; lostReason: string | null; dealStatus: string; createdAt: Date; updatedAt: Date }) => sum + d.nilai, 0);
+    const wonDeals = deals.filter((d: { dealStatus: string }) => d.dealStatus === 'won');
 
     return NextResponse.json({
       deals,
@@ -64,10 +64,10 @@ export async function GET(req: Request) {
         totalDeals: deals.length,
         totalNilai,
         wonCount: wonDeals.length,
-        wonNilai: wonDeals.reduce((sum, d) => sum + d.nilai, 0),
+        wonNilai: wonDeals.reduce((sum: number, d: { nilai: number }) => sum + d.nilai, 0),
       },
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[DEALS GET]', error);
     return NextResponse.json({ error: 'Gagal memuat data' }, { status: 500 });
   }
