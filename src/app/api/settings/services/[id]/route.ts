@@ -13,7 +13,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     const svc = await prisma.service.update({ where: { id }, data });
     return NextResponse.json({ success: true, service: svc });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[SERVICES PATCH]', error);
     return NextResponse.json({ error: 'Gagal mengupdate layanan' }, { status: 500 });
   }
@@ -24,7 +24,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   try {
     await prisma.service.delete({ where: { id } });
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[SERVICES DELETE]', error);
     return NextResponse.json({ error: 'Gagal menghapus layanan' }, { status: 500 });
   }

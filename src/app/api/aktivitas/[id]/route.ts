@@ -30,7 +30,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     });
 
     return NextResponse.json({ activity });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[AKTIVITAS PATCH]', error);
     return NextResponse.json({ error: 'Gagal mengupdate aktivitas' }, { status: 500 });
   }
@@ -41,7 +41,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     const { id } = await params;
     await prisma.activity.delete({ where: { id } });
     return NextResponse.json({ ok: true });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[AKTIVITAS DELETE]', error);
     return NextResponse.json({ error: 'Gagal menghapus aktivitas' }, { status: 500 });
   }

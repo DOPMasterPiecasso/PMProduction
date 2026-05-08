@@ -10,10 +10,10 @@ export async function GET() {
     ]);
 
     const settingsMap: Record<string, string> = {};
-    for (const s of systemSettings) settingsMap[s.key] = s.value;
+    for (const s of systemSettings as { key: string; value: string }[]) settingsMap[s.key] = s.value;
 
     return NextResponse.json({ users, services, systemSettings: settingsMap });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[SETTINGS GET]', error);
     return NextResponse.json({ error: 'Gagal memuat data' }, { status: 500 });
   }
@@ -31,7 +31,7 @@ export async function PATCH(req: Request) {
     });
 
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[SETTINGS PATCH]', error);
     return NextResponse.json({ error: 'Gagal menyimpan pengaturan' }, { status: 500 });
   }

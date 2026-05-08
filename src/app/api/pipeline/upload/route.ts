@@ -53,7 +53,7 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ success: true, document });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[UPLOAD ERROR]', error);
     return NextResponse.json({ error: 'Gagal mengupload file' }, { status: 500 });
   }

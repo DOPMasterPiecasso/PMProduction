@@ -11,7 +11,7 @@ export async function POST(req: Request) {
       data: { nama, deskripsi: deskripsi || '', colorHex: colorHex || '#6B7280', isActive: true },
     });
     return NextResponse.json({ success: true, service: svc });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[SERVICES POST]', error);
     return NextResponse.json({ error: 'Gagal menambah layanan' }, { status: 500 });
   }

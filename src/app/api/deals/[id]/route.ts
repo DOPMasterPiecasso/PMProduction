@@ -26,7 +26,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     });
 
     return NextResponse.json({ deal });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[DEAL PATCH]', error);
     return NextResponse.json({ error: 'Gagal mengupdate deal' }, { status: 500 });
   }

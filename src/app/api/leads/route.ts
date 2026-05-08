@@ -30,7 +30,7 @@ export async function GET(req: Request) {
     ]);
 
     return NextResponse.json({ leads, meta: { sources, services, users } });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[LEADS GET]', error);
     return NextResponse.json({ error: 'Gagal memuat data' }, { status: 500 });
   }
@@ -64,7 +64,7 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ lead }, { status: 201 });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[LEADS POST]', error);
     return NextResponse.json({ error: 'Gagal membuat lead' }, { status: 500 });
   }

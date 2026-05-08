@@ -185,7 +185,7 @@ export async function GET() {
       revenuePerService,
       sourceAnalysis,
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[ANALYTICS GET]', error);
     return NextResponse.json({ error: 'Gagal memuat data' }, { status: 500 });
   }

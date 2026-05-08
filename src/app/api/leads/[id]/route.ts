@@ -27,7 +27,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     });
 
     return NextResponse.json({ lead });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[LEAD PATCH]', error);
     return NextResponse.json({ error: 'Gagal mengupdate lead' }, { status: 500 });
   }
@@ -38,7 +38,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     const { id } = await params;
     await prisma.lead.delete({ where: { id } });
     return NextResponse.json({ ok: true });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[LEAD DELETE]', error);
     return NextResponse.json({ error: 'Gagal menghapus lead' }, { status: 500 });
   }

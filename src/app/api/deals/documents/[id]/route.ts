@@ -18,7 +18,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     }
 
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[DELETE DOCUMENT]', error);
     return NextResponse.json({ error: 'Gagal menghapus dokumen' }, { status: 500 });
   }

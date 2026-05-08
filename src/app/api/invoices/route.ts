@@ -39,7 +39,7 @@ export async function GET(req: Request) {
     let overdueTotal = 0;
     let overdueCount = 0;
 
-    for (const inv of invoices) {
+    for (const inv of invoices as { id: string; clientId: string; dealId: string | null; nomorInvoice: string; namaProject: string | null; nominal: number; tanggalTerbit: Date; jatuhTempo: Date; status: string; keterangan: string | null; paidAmount: number | null; createdById: string | null; createdAt: Date; updatedAt: Date; client: { id: string; namaKlien: string } }[]) {
       const due = new Date(inv.jatuhTempo);
       const isOverdue = due < now && inv.status !== 'paid';
 
@@ -72,7 +72,7 @@ export async function GET(req: Request) {
     };
 
     return NextResponse.json({ invoices, stats });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[INVOICES GET]', error);
     return NextResponse.json({ error: 'Gagal memuat data' }, { status: 500 });
   }
@@ -108,7 +108,7 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ success: true, invoice });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[INVOICES POST]', error);
     return NextResponse.json({ error: 'Gagal membuat invoice' }, { status: 500 });
   }
@@ -141,7 +141,7 @@ export async function PATCH(req: Request) {
     });
 
     return NextResponse.json({ success: true, invoice });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[INVOICES PATCH]', error);
     return NextResponse.json({ error: 'Gagal mengupdate invoice' }, { status: 500 });
   }

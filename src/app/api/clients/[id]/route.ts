@@ -32,7 +32,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     });
 
     return NextResponse.json({ client });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[CLIENT PATCH]', error);
     return NextResponse.json({ error: 'Gagal mengupdate klien' }, { status: 500 });
   }
@@ -44,7 +44,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     const { id } = await params;
     await prisma.client.delete({ where: { id } });
     return NextResponse.json({ ok: true });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[CLIENT DELETE]', error);
     return NextResponse.json({ error: 'Gagal menghapus klien' }, { status: 500 });
   }

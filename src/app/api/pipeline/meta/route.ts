@@ -25,7 +25,7 @@ export async function GET() {
     ]);
 
     return NextResponse.json({ clients, services, stages, aes });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[PIPELINE META GET]', error);
     return NextResponse.json({ error: 'Gagal memuat data' }, { status: 500 });
   }

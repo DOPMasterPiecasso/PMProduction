@@ -9,7 +9,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
 
     await prisma.invoice.delete({ where: { id } });
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[DELETE INVOICE]', error);
     return NextResponse.json({ error: 'Gagal menghapus invoice' }, { status: 500 });
   }

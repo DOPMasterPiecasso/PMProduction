@@ -38,7 +38,7 @@ export async function GET(req: Request) {
     ]);
 
     return NextResponse.json({ clients, meta: { clientTypes, cities, sources, services } });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[CLIENTS GET]', error);
     return NextResponse.json({ error: 'Gagal memuat data' }, { status: 500 });
   }
@@ -75,7 +75,7 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ client }, { status: 201 });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[CLIENTS POST]', error);
     return NextResponse.json({ error: 'Gagal membuat klien' }, { status: 500 });
   }

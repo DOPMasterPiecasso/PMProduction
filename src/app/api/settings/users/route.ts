@@ -27,7 +27,7 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ success: true, user });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[USERS POST]', error);
     return NextResponse.json({ error: 'Gagal menambah anggota' }, { status: 500 });
   }

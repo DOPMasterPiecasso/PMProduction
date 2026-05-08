@@ -34,7 +34,7 @@ export async function POST(req: Request) {
     const fileUrl = `/uploads/aktivitas/${filename}`;
 
     return NextResponse.json({ success: true, fileUrl, fileName: file.name });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[AKTIVITAS UPLOAD]', error);
     return NextResponse.json({ error: 'Gagal mengupload file' }, { status: 500 });
   }

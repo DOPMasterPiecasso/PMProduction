@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+type UserData = {
+  id: string; name: string; av: string; bg: string; c: string;
+  deals: number; rev: number; act: number; fu: number; ov: number;
+  inactive: number; status: string; targetDeals: number; targetRevenue: number;
+};
+
 const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 
 export async function GET(req: Request) {
@@ -22,10 +28,10 @@ export async function GET(req: Request) {
     const kpiTargets = await prisma.kpiTarget.findMany({
       where: { bulan },
     });
-    const targetMap = new Map(kpiTargets.map((t) => [t.userId, t]));
+    const targetMap = new Map(kpiTargets.map((t: { userId: string; targetDeals: number; targetRevenue: number }) => [t.userId, t]));
 
     const now = new Date();
-    const teamData = await Promise.all(users.map(async (user) => {
+    const teamData = await Promise.all(users.map(async (user: { id: string; nama: string; email: string; password: string; role: string; avatarInitial: string | null; avatarColor: string | null; isActive: boolean; createdAt: Date; updatedAt: Date }) => {
       // Deals won this month
       const dealsThisMonth = await prisma.deal.findMany({
         where: {
@@ -35,7 +41,7 @@ export async function GET(req: Request) {
         },
       });
       const dealsActual = dealsThisMonth.length;
-      const revenueActual = dealsThisMonth.reduce((s, d) => s + d.nilai, 0);
+      const revenueActual = dealsThisMonth.reduce((s: number, d: { nilai: number }) => s + d.nilai, 0);
 
       // Activities this month
       const activitiesThisMonth = await prisma.activity.findMany({
@@ -45,7 +51,7 @@ export async function GET(req: Request) {
         },
       });
       const totalAct = activitiesThisMonth.length;
-      const fuDone = activitiesThisMonth.filter((a) => a.isDone).length;
+      const fuDone = activitiesThisMonth.filter((a: { isDone: boolean }) => a.isDone).length;
 
       // FU overdue (anytime, not just this month)
       const fuOverdue = await prisma.activity.count({
@@ -95,15 +101,15 @@ export async function GET(req: Request) {
 
     // Totals
     const totals = {
-      totalAct: teamData.reduce((s, d) => s + d.act, 0),
-      totalFu: teamData.reduce((s, d) => s + d.fu, 0),
-      totalOv: teamData.reduce((s, d) => s + d.ov, 0),
-      totalDeals: teamData.reduce((s, d) => s + d.deals, 0),
+      totalAct: teamData.reduce((s: number, d: UserData) => s + d.act, 0),
+      totalFu: teamData.reduce((s: number, d: UserData) => s + d.fu, 0),
+      totalOv: teamData.reduce((s: number, d: UserData) => s + d.ov, 0),
+      totalDeals: teamData.reduce((s: number, d: UserData) => s + d.deals, 0),
     };
 
     // Alerts
     const alerts: { type: 'danger' | 'warn'; message: string }[] = [];
-    for (const d of teamData) {
+    for (const d of teamData as UserData[]) {
       if (d.act < 10 && d.deals < 2) {
         alerts.push({ type: 'danger', message: `${d.name} - Low activity: hanya ${d.act} aktivitas dalam bulan ini` });
       } else if (d.ov > 0) {
@@ -112,7 +118,7 @@ export async function GET(req: Request) {
     }
 
     return NextResponse.json({ teamData, totals, alerts, bulan, monthLabel: `${monthNames[month]} ${year}` });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[TEAM GET]', error);
     return NextResponse.json({ error: 'Gagal memuat data' }, { status: 500 });
   }
@@ -142,7 +148,7 @@ export async function PATCH(req: Request) {
     });
 
     return NextResponse.json({ success: true, target });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[TEAM PATCH]', error);
     return NextResponse.json({ error: 'Gagal menyimpan target KPI' }, { status: 500 });
   }

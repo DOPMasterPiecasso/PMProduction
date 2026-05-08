@@ -118,7 +118,7 @@ export async function GET(req: Request) {
     };
 
     return NextResponse.json({ activities, calEvents, stats, meta: { activityTypes, users, clients } });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[AKTIVITAS GET]', error);
     return NextResponse.json({ error: 'Gagal memuat data' }, { status: 500 });
   }
@@ -158,7 +158,7 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ activity }, { status: 201 });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[AKTIVITAS POST]', error);
     return NextResponse.json({ error: 'Gagal membuat aktivitas' }, { status: 500 });
   }

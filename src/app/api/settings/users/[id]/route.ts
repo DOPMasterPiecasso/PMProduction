@@ -16,7 +16,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       select: { id: true, nama: true, email: true, role: true, isActive: true },
     });
     return NextResponse.json({ success: true, user });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[USERS PATCH]', error);
     return NextResponse.json({ error: 'Gagal mengupdate user' }, { status: 500 });
   }
@@ -29,7 +29,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     if (user?.role === 'owner') return NextResponse.json({ error: 'Owner tidak dapat dihapus' }, { status: 400 });
     await prisma.user.delete({ where: { id } });
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[USERS DELETE]', error);
     return NextResponse.json({ error: 'Gagal menghapus user' }, { status: 500 });
   }
