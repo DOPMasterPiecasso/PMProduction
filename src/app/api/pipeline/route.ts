@@ -19,9 +19,9 @@ export async function GET() {
     ]);
 
     // Agregat per stage
-    const stageStats = stages.map((stage) => {
-      const stageDeals = deals.filter((d) => d.stageId === stage.id);
-      const totalNilai = stageDeals.reduce((sum, d) => sum + d.nilai, 0);
+    const stageStats = stages.map((stage: { id: string; nama: string; urutan: number; probabilityDefault: number; colorHex: string; isTerminal: boolean }) => {
+      const stageDeals = deals.filter((d: { stageId: string | null }) => d.stageId === stage.id);
+      const totalNilai = stageDeals.reduce((sum: number, d: { nilai: number }) => sum + d.nilai, 0);
       return {
         ...stage,
         dealCount: stageDeals.length,
@@ -30,7 +30,7 @@ export async function GET() {
     });
 
     return NextResponse.json({ deals, stages: stageStats });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[PIPELINE GET]', error);
     return NextResponse.json({ error: 'Gagal memuat data pipeline' }, { status: 500 });
   }
@@ -54,7 +54,7 @@ export async function PATCH(req: Request) {
     });
 
     return NextResponse.json({ deal: updated });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[PIPELINE PATCH]', error);
     return NextResponse.json({ error: 'Gagal update deal' }, { status: 500 });
   }
@@ -85,7 +85,7 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ deal }, { status: 201 });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[PIPELINE POST]', error);
     return NextResponse.json({ error: 'Gagal membuat deal' }, { status: 500 });
   }
