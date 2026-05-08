@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
 import {
   LayoutDashboard,
   UserPlus,
@@ -174,6 +175,13 @@ export function Sidebar() {
           <div className="text-[13px] font-medium text-[#18181B]">Dhamar</div>
           <div className="text-[10px] text-[#A0A0A8]">Owner</div>
         </div>
+        <button
+          onClick={() => signOut({ callbackUrl: "/login" })}
+          className="text-[11px] text-[#A0A0A8] hover:text-[#B91C1C] transition-colors"
+          title="Logout"
+        >
+          Logout
+        </button>
       </div>
     </aside>
   );
