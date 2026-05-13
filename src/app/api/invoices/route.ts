@@ -40,23 +40,26 @@ export async function GET(req: Request) {
     let overdueCount = 0;
 
     for (const inv of invoices as { id: string; clientId: string; dealId: string | null; nomorInvoice: string; namaProject: string | null; nominal: number; tanggalTerbit: Date; jatuhTempo: Date; status: string; keterangan: string | null; paidAmount: number | null; createdById: string | null; createdAt: Date; updatedAt: Date; client: { id: string; namaKlien: string } }[]) {
-      const due = new Date(inv.jatuhTempo);
-      const isOverdue = due < now && inv.status !== 'paid';
+      const remaining = inv.nominal - (inv.paidAmount || 0);
+      const isPastDue = new Date(inv.jatuhTempo) < now;
 
       if (inv.status === 'paid') {
         if (inv.tanggalTerbit.getMonth() === thisMonth && inv.tanggalTerbit.getFullYear() === thisYear) {
           paidThisMonth += inv.nominal;
           paidCount++;
         }
-      } else if (isOverdue) {
-        overdueTotal += inv.nominal;
-        overdueCount++;
-      } else if (inv.status === 'unpaid') {
-        unpaidTotal += inv.nominal;
-        unpaidCount++;
-      } else if (inv.status === 'partial') {
-        partialTotal += inv.nominal;
-        partialCount++;
+      } else {
+        if (inv.status === 'unpaid') {
+          unpaidTotal += remaining;
+          unpaidCount++;
+        } else if (inv.status === 'partial') {
+          partialTotal += remaining;
+          partialCount++;
+        }
+        if (isPastDue) {
+          overdueTotal += remaining;
+          overdueCount++;
+        }
       }
     }
 
@@ -132,6 +135,8 @@ export async function PATCH(req: Request) {
     if (data.status === 'paid') {
       const inv = await prisma.invoice.findUnique({ where: { id } });
       if (inv) updateData.paidAmount = inv.nominal;
+    } else if (data.status === 'unpaid') {
+      updateData.paidAmount = 0;
     }
 
     const invoice = await prisma.invoice.update({

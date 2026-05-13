@@ -91,17 +91,7 @@ export default function LoginPage() {
             {loading ? "Memeriksa..." : "Masuk"}
           </button>
 
-          <div className="text-[11.5px] text-[#A0A0A8] text-center leading-relaxed">
-            Demo: manager@studio.id / manager123<br/>
-            atau: staff@studio.id / staff123
-          </div>
         </form>
-
-        {/* Footer Badges */}
-        <div className="p-[12px_28px_20px] flex gap-[8px] justify-center flex-wrap">
-          <span className="text-[11px] bg-[#F5F3FF] text-[#6D28D9] px-[10px] py-[3px] rounded-[20px] font-medium">Manager - akses penuh</span>
-          <span className="text-[11px] bg-[#FFFBEB] text-[#B45309] px-[10px] py-[3px] rounded-[20px] font-medium">AE - akses terbatas</span>
-        </div>
       </div>
     </div>
   );

@@ -26,9 +26,12 @@ export async function GET() {
     // ── Outstanding (unpaid + partial + overdue) ──────────────
     const outstandingInv = await prisma.invoice.findMany({
       where: { status: { in: ['unpaid', 'partial', 'overdue'] } },
-      select: { nominal: true, status: true },
+      select: { nominal: true, status: true, paidAmount: true },
     });
-    const outstandingTotal = outstandingInv.reduce((s: number, i: { nominal: number; status: string }) => s + i.nominal, 0);
+    const outstandingTotal = outstandingInv.reduce((s: number, i: { nominal: number; status: string; paidAmount: number | null }) => {
+      const remaining = i.nominal - (i.paidAmount || 0);
+      return s + remaining;
+    }, 0);
     const unpaidCount = outstandingInv.filter((i: { status: string }) => i.status !== 'paid').length;
 
     // ── Conversion Rate ──────────────────────────────────────

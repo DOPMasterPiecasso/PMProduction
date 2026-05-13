@@ -290,7 +290,7 @@ export default function Dashboard() {
                   const dueDate = new Date(inv.jatuhTempo);
                   const dueStr = dueDate.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
                   return (
-                    <tr key={inv.id} className="border-b border-black/5 hover:bg-gray-50/50 cursor-pointer">
+                    <tr key={inv.id} onClick={() => router.push(`/invoices?search=${encodeURIComponent(inv.client)}`)} className="border-b border-black/5 hover:bg-gray-50/50 cursor-pointer">
                       <td className="px-3 py-2.5"><div className={`w-2 h-2 rounded-full ${statusDot(inv)}`} /></td>
                       <td className="px-3 py-2.5 font-medium">{inv.client}</td>
                       <td className="px-3 py-2.5 text-gray-500">{inv.project || '-'}</td>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Search, Loader2, Plus, Download, Bell, Save, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -65,13 +66,14 @@ function statusLabel(s: string) {
 }
 
 export default function InvoicesPage() {
+  const searchParams = useSearchParams();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [stats, setStats] = useState<InvStats>({
     paidThisMonth: 0, paidCount: 0, unpaidTotal: 0, unpaidCount: 0,
     partialTotal: 0, partialCount: 0, overdueTotal: 0, overdueCount: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(searchParams.get('search') ?? '');
   const [showCreate, setShowCreate] = useState(false);
 
   const fetchInvoices = useCallback(async () => {

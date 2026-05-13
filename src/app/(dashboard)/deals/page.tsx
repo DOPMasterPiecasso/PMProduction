@@ -326,11 +326,21 @@ export default function DealsPage() {
     }
   }
 
+  function isProduction(d: Deal) {
+    return d.dealStatus === 'active' && (d.stage?.nama === 'Meeting' || d.stage?.nama === 'Negotiation');
+  }
+  function isConfirmed(d: Deal) {
+    return d.dealStatus === 'active' && d.stage && d.stage.urutan < 4;
+  }
+  function isDone(d: Deal) {
+    return d.dealStatus === 'won';
+  }
+
   const filteredDeals = deals.filter((d) => {
-    if (filterStatus === 'Production') return d.dealStatus === 'active' && (d.stage?.nama === 'Meeting' || d.stage?.nama === 'Negotiation');
-    if (filterStatus === 'Confirmed') return d.dealStatus === 'active' && d.stage && d.stage.urutan < 4;
-    if (filterStatus === 'Done') return d.dealStatus === 'won';
-    return true;
+    if (filterStatus === 'Production') return isProduction(d);
+    if (filterStatus === 'Confirmed') return isConfirmed(d);
+    if (filterStatus === 'Done') return isDone(d);
+    return isProduction(d) || isConfirmed(d) || isDone(d);
   });
 
   const maxOffset = Math.max(0, monthlyData.length - 6);

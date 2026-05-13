@@ -120,15 +120,31 @@ export default function AnalyticsPage() {
           </div>
         </div>
         <div className="p-4">
-          <div className="flex items-end gap-[6px] h-[110px] mb-2">
+          <div className="flex items-end gap-[6px] h-[110px] mb-2 relative">
+            {(() => {
+              const monthlyTarget = revenueSummary.annualTarget / 12;
+              const linePct = Math.min((monthlyTarget / maxRevenue) * 100, 100);
+              if (revenueSummary.annualTarget > 0 && maxRevenue > 0) {
+                return (
+                  <div
+                    className="absolute left-0 right-0 border-t-2 border-dashed border-amber-400 z-10 pointer-events-none"
+                    style={{ bottom: `${linePct}%` }}
+                    title={`Target bulanan: ${formatRpShort(monthlyTarget)}`}
+                  />
+                );
+              }
+              return null;
+            })()}
             {monthlyRevenue.map((m) => {
+              const monthlyTarget = revenueSummary.annualTarget / 12;
               const h = Math.max((m.total / maxRevenue) * 100, 4);
               const isCurrent = m.bulan === `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+              const overTarget = monthlyTarget > 0 && m.total >= monthlyTarget;
               return (
                 <div key={m.bulan} className="flex-1 flex flex-col items-center gap-1">
                   <div
                     className="w-full rounded-t-sm transition-opacity hover:opacity-70 cursor-pointer"
-                    style={{ height: `${h}%`, minHeight: '4px', background: isCurrent ? '#2563EB' : '#93C5FD' }}
+                    style={{ height: `${h}%`, minHeight: '4px', background: isCurrent ? '#2563EB' : overTarget ? '#16A34A' : '#93C5FD' }}
                     title={`${m.monthLabel}: ${formatRpShort(m.total)}`}
                   />
                   <div className={`text-[9px] font-mono ${isCurrent ? 'text-blue-600 font-semibold' : 'text-gray-400'}`}>{m.monthLabel}</div>
