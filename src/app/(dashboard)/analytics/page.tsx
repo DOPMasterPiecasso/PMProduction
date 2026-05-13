@@ -137,17 +137,18 @@ export default function AnalyticsPage() {
             })()}
             {monthlyRevenue.map((m) => {
               const monthlyTarget = revenueSummary.annualTarget / 12;
-              const h = Math.max((m.total / maxRevenue) * 100, 4);
+              const hPct = maxRevenue > 0 ? (m.total / maxRevenue) * 100 : 0;
+              const hPx = Math.max(Math.round((hPct / 100) * 106), 4);
               const isCurrent = m.bulan === `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
               const overTarget = monthlyTarget > 0 && m.total >= monthlyTarget;
               return (
-                <div key={m.bulan} className="flex-1 flex flex-col items-center gap-1">
+                <div key={m.bulan} className="flex-1 h-full flex flex-col items-center justify-end gap-1">
                   <div
-                    className="w-full rounded-t-sm transition-opacity hover:opacity-70 cursor-pointer"
-                    style={{ height: `${h}%`, minHeight: '4px', background: isCurrent ? '#2563EB' : overTarget ? '#16A34A' : '#93C5FD' }}
+                    className="w-full rounded-t-sm transition-opacity hover:opacity-70 cursor-pointer shrink-0"
+                    style={{ height: `${hPx}px`, background: isCurrent ? '#2563EB' : overTarget ? '#16A34A' : '#93C5FD' }}
                     title={`${m.monthLabel}: ${formatRpShort(m.total)}`}
                   />
-                  <div className={`text-[9px] font-mono ${isCurrent ? 'text-blue-600 font-semibold' : 'text-gray-400'}`}>{m.monthLabel}</div>
+                  <div className={`text-[9px] font-mono shrink-0 ${isCurrent ? 'text-blue-600 font-semibold' : 'text-gray-400'}`}>{m.monthLabel}</div>
                 </div>
               );
             })}
