@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { Suspense, useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Search, Loader2, Plus, Download, Bell, Save, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -65,7 +65,7 @@ function statusLabel(s: string) {
   }
 }
 
-export default function InvoicesPage() {
+function InvoicesPage() {
   const searchParams = useSearchParams();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [stats, setStats] = useState<InvStats>({
@@ -420,5 +420,13 @@ function CreateInvoiceModal({ onClose, onCreated }: { onClose: () => void; onCre
         </div>
       </div>
     </div>
+  );
+}
+
+export default function InvoicesPageWrapper() {
+  return (
+    <Suspense fallback={<div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>}>
+      <InvoicesPage />
+    </Suspense>
   );
 }
