@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sendWA, generateInvoiceMessage } from '@/lib/whatsapp';
 
-const PREVIEW_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+const PREVIEW_URL = (process.env.NEXTAUTH_URL || 'http://localhost:3000').replace(/\/+$/, '');
 
 export async function POST(req: Request) {
   try {
