@@ -5,7 +5,7 @@ export async function GET() {
   try {
     const [deals, stages] = await Promise.all([
       prisma.deal.findMany({
-        where: { dealStatus: { not: 'archived' } },
+        where: {},
         include: {
           client: { select: { namaKlien: true } },
           service: { select: { nama: true, colorHex: true } },
@@ -50,7 +50,13 @@ export async function PATCH(req: Request) {
 
     const updated = await prisma.deal.update({
       where: { id: dealId },
-      data: { stageId, dealStatus: newStatus, probability: stage.probabilityDefault, notes: notes ?? undefined, namaProject: namaProject ?? undefined },
+      data: {
+        stageId,
+        dealStatus: newStatus,
+        probability: newStatus === 'archived' ? undefined : stage.probabilityDefault,
+        notes: notes ?? undefined,
+        namaProject: namaProject ?? undefined,
+      },
     });
 
     return NextResponse.json({ deal: updated });

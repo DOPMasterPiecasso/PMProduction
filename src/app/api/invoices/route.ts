@@ -19,6 +19,11 @@ export async function GET(req: Request) {
       where,
       include: {
         client: { select: { id: true, namaKlien: true } },
+        documents: { select: { id: true, fileName: true, fileType: true, fileSizeBytes: true, fileUrl: true, uploadedAt: true } },
+        terms: {
+          orderBy: { terminKe: 'asc' },
+          include: { documents: { select: { id: true, fileName: true, fileType: true, fileSizeBytes: true, fileUrl: true, uploadedAt: true } } },
+        },
       },
       orderBy: [
         { status: 'asc' },
@@ -126,6 +131,83 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: 'ID invoice wajib diisi' }, { status: 400 });
     }
 
+    // ── Term operations ────────────────────────────────────
+    if (data.termId) {
+      if (data.termStatus) {
+        const term = await prisma.invoiceTerm.findUnique({ where: { id: data.termId } });
+        if (term) {
+          await prisma.invoiceTerm.update({
+            where: { id: data.termId },
+            data: {
+              status: data.termStatus,
+              paidAt: data.termStatus === 'paid' ? new Date() : null,
+              paidAmount: data.termStatus === 'paid' ? term.amount : 0,
+            },
+          });
+        }
+      }
+      if (data.termJatuhTempo) {
+        await prisma.invoiceTerm.update({
+          where: { id: data.termId },
+          data: { jatuhTempo: new Date(data.termJatuhTempo) },
+        });
+      }
+      // Recalculate invoice status based on terms
+      await recalcInvoiceStatus(id);
+      const invoice = await prisma.invoice.findUnique({
+        where: { id },
+        include: { client: { select: { id: true, namaKlien: true } }, terms: { orderBy: { terminKe: 'asc' }, include: { documents: { select: { id: true, fileName: true, fileType: true, fileSizeBytes: true, fileUrl: true, uploadedAt: true } } } } },
+      });
+      return NextResponse.json({ success: true, invoice });
+    }
+
+    if (data.addTerm) {
+      await prisma.invoiceTerm.create({
+        data: {
+          invoiceId: id,
+          terminKe: data.terminKe || 1,
+          percentage: data.percentage || null,
+          amount: parseFloat(data.amount) || 0,
+          jatuhTempo: new Date(data.jatuhTempo || new Date()),
+          status: 'pending',
+          keterangan: data.keterangan || null,
+        },
+      });
+      await recalcInvoiceStatus(id);
+      const invoice = await prisma.invoice.findUnique({
+        where: { id },
+        include: { client: { select: { id: true, namaKlien: true } }, terms: { orderBy: { terminKe: 'asc' }, include: { documents: { select: { id: true, fileName: true, fileType: true, fileSizeBytes: true, fileUrl: true, uploadedAt: true } } } } },
+      });
+      return NextResponse.json({ success: true, invoice });
+    }
+
+    if (data.editTerm) {
+      const updateData: Record<string, unknown> = {};
+      if (data.terminKe !== undefined) updateData.terminKe = data.terminKe;
+      if (data.percentage !== undefined) updateData.percentage = data.percentage;
+      if (data.amount !== undefined) updateData.amount = parseFloat(data.amount);
+      if (data.jatuhTempo !== undefined) updateData.jatuhTempo = new Date(data.jatuhTempo);
+      if (data.keterangan !== undefined) updateData.keterangan = data.keterangan;
+      await prisma.invoiceTerm.update({ where: { id: data.editTerm }, data: updateData });
+      await recalcInvoiceStatus(id);
+      const invoice = await prisma.invoice.findUnique({
+        where: { id },
+        include: { client: { select: { id: true, namaKlien: true } }, terms: { orderBy: { terminKe: 'asc' }, include: { documents: { select: { id: true, fileName: true, fileType: true, fileSizeBytes: true, fileUrl: true, uploadedAt: true } } } } },
+      });
+      return NextResponse.json({ success: true, invoice });
+    }
+
+    if (data.deleteTerm) {
+      await prisma.invoiceTerm.delete({ where: { id: data.deleteTerm } });
+      await recalcInvoiceStatus(id);
+      const invoice = await prisma.invoice.findUnique({
+        where: { id },
+        include: { client: { select: { id: true, namaKlien: true } }, terms: { orderBy: { terminKe: 'asc' }, include: { documents: { select: { id: true, fileName: true, fileType: true, fileSizeBytes: true, fileUrl: true, uploadedAt: true } } } } },
+      });
+      return NextResponse.json({ success: true, invoice });
+    }
+
+    // ── Standard invoice updates ───────────────────────────
     const updateData: Record<string, unknown> = {};
     if (data.status !== undefined) updateData.status = data.status;
     if (data.jatuhTempo !== undefined) updateData.jatuhTempo = new Date(data.jatuhTempo);
@@ -150,4 +232,24 @@ export async function PATCH(req: Request) {
     console.error('[INVOICES PATCH]', error);
     return NextResponse.json({ error: 'Gagal mengupdate invoice' }, { status: 500 });
   }
+}
+
+async function recalcInvoiceStatus(invoiceId: string) {
+  const terms = await prisma.invoiceTerm.findMany({ where: { invoiceId } });
+  if (terms.length === 0) return;
+  const allPaid = terms.every((t) => t.status === 'paid');
+  const allPending = terms.every((t) => t.status === 'pending');
+  const anyOverdue = terms.some((t) => t.status === 'overdue');
+  const totalPaid = terms.filter((t) => t.status === 'paid').reduce((s, t) => s + (t.paidAmount || t.amount), 0);
+  const inv = await prisma.invoice.findUnique({ where: { id: invoiceId } });
+  if (!inv) return;
+  let newStatus = inv.status;
+  if (allPaid) newStatus = 'paid';
+  else if (anyOverdue) newStatus = 'overdue';
+  else if (totalPaid > 0 && totalPaid < inv.nominal) newStatus = 'partial';
+  else if (totalPaid === 0) newStatus = 'unpaid';
+  await prisma.invoice.update({
+    where: { id: invoiceId },
+    data: { status: newStatus, paidAmount: totalPaid },
+  });
 }

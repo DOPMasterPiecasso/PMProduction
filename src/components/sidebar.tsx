@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
+import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   UserPlus,
@@ -14,6 +15,7 @@ import {
   BarChart3,
   Target,
   Settings,
+  Send,
 } from "lucide-react";
 
 const salesItems = [
@@ -26,6 +28,7 @@ const crmItems = [
   { name: "Database Klien", href: "/clients", icon: Users },
   { name: "Deal Clients", href: "/deals", icon: CheckCircle },
   { name: "Invoices", href: "/invoices", icon: Receipt, badge: "2" },
+  { name: "Pesan WhatsApp", href: "/messages", icon: Send },
 ];
 
 const reportItems = [
@@ -89,6 +92,16 @@ function NavSection({ label, children }: { label: string; children: React.ReactN
 
 export function Sidebar() {
   const pathname = usePathname();
+  const [studioName, setStudioName] = useState("CreativeOS");
+
+  useEffect(() => {
+    fetch('/api/branding')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.studio_name) setStudioName(data.studio_name);
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     <aside className="w-[218px] min-w-[218px] bg-white border-r border-black/[.07] flex flex-col h-full font-sans">
@@ -100,7 +113,7 @@ export function Sidebar() {
           </svg>
         </div>
         <div>
-          <div className="text-[14px] font-semibold tracking-[-0.3px] text-[#18181B]">CreativeOS</div>
+          <div className="text-[14px] font-semibold tracking-[-0.3px] text-[#18181B]">{studioName}</div>
           <div className="text-[10px] text-[#A0A0A8]">v3 - Sales OS</div>
         </div>
       </div>

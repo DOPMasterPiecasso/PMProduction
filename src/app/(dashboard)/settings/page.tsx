@@ -148,6 +148,7 @@ export default function SettingsPage() {
     if (Object.keys(systemSettings).length > 0) {
       setSettingsForm({
         studio_name: systemSettings.studio_name || '',
+        wa_api_key: systemSettings.wa_api_key || '',
         wa_admin: systemSettings.wa_admin || '',
         email_admin: systemSettings.email_admin || '',
         fu_overdue_days: systemSettings.fu_overdue_days || '3',
@@ -334,6 +335,7 @@ export default function SettingsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {[
               { key: 'studio_name', label: 'Nama Studio / Agency', type: 'text' },
+              { key: 'wa_api_key', label: 'WA API Key (Fonnte)', type: 'text' },
               { key: 'wa_admin', label: 'WA Admin (untuk notifikasi lead)', type: 'text' },
               { key: 'email_admin', label: 'Email Admin', type: 'email' },
               { key: 'fu_overdue_days', label: 'Batas FU Overdue (hari)', type: 'number' },

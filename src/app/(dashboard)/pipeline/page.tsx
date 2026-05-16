@@ -37,6 +37,10 @@ interface Stage {
   totalNilai: number;
 }
 
+function formatRpFull(n: number) {
+  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
+}
+
 function formatRp(n: number) {
   if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1).replace('.0', '')}B`;
   if (n >= 1_000_000) return `${Math.round(n / 1_000_000)}M`;
@@ -59,7 +63,9 @@ function svcBg(hex: string) {
 }
 
 function stageLabel(nama: string) {
-  return nama === 'Lost' ? 'Lost / Kalah' : nama;
+  if (nama === 'Lost') return 'Lost / Kalah';
+  if (nama === 'Won') return 'Deal';
+  return nama;
 }
 
 // ─── Add Deal Modal ──────────────────────────────────────────
@@ -309,16 +315,38 @@ function DealModal({
   const [catatan, setCatatan] = useState(deal.notes ?? '');
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [confirmArchive, setConfirmArchive] = useState(false);
+  const [archiving, setArchiving] = useState(false);
+  const [editForm, setEditForm] = useState({
+    serviceId: deal.service?.id || '',
+    nilai: String(deal.nilai),
+    probability: String(deal.probability),
+    assignedAeId: deal.assignedAe?.id || '',
+    isHot: deal.isHot,
+    dealStatus: deal.dealStatus,
+    namaProject: deal.namaProject || '',
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   async function handleUpdate() {
     setSaving(true);
     try {
+      const body: Record<string, unknown> = { dealId: deal.id, stageId: selectedStageId, notes: catatan };
+      if (showEdit) {
+        body.serviceId = editForm.serviceId || null;
+        body.nilai = Number(editForm.nilai) || 0;
+        body.probability = Number(editForm.probability) || 0;
+        body.assignedAeId = editForm.assignedAeId || null;
+        body.isHot = editForm.isHot;
+        body.dealStatus = editForm.dealStatus;
+        body.namaProject = editForm.namaProject || null;
+      }
       const res = await fetch('/api/pipeline', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dealId: deal.id, stageId: selectedStageId, notes: catatan }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error();
 
@@ -345,6 +373,32 @@ function DealModal({
     }
   }
 
+  const isArchived = deal.dealStatus === 'archived';
+
+  async function handleArchive() {
+    setArchiving(true);
+    try {
+      const newStatus = isArchived ? 'active' : 'archived';
+      const res = await fetch('/api/pipeline', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dealId: deal.id, stageId: deal.stageId, dealStatus: newStatus }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success(isArchived ? 'Deal dikembalikan' : 'Deal diarsipkan');
+      onUpdated();
+      onClose();
+    } catch {
+      toast.error(isArchived ? 'Gagal mengembalikan deal' : 'Gagal mengarsipkan deal');
+    } finally {
+      setSaving(false);
+      setUploading(false);
+    }
+  }
+
+  const inputCls = 'w-full text-[12px] border border-black/[0.1] rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-[#18181B]/10 text-[#18181B] placeholder:text-gray-300';
+  const svcHex = deal.service?.colorHex ?? '#94A3B8';
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
@@ -354,32 +408,75 @@ function DealModal({
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-black/[0.07]">
           <span className="text-[14px] font-semibold text-[#18181B]">Detail Deal</span>
-          <button
-            onClick={onClose}
-            className="w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors text-[16px] font-medium"
-          >
-            ×
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowEdit(!showEdit)}
+              className={`w-7 h-7 flex items-center justify-center rounded-full transition-colors text-[14px] ${showEdit ? 'bg-[#18181B] text-white' : 'text-gray-400 hover:bg-gray-100'}`}
+              title="Edit deal"
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+            </button>
+            <button
+              onClick={onClose}
+              className="w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors text-[16px] font-medium"
+            >
+              ×
+            </button>
+          </div>
         </div>
 
         {/* Body */}
-        <div className="px-5 py-4 flex flex-col gap-4">
+        <div className="px-5 py-4 flex flex-col gap-4 max-h-[65vh] overflow-y-auto">
           {/* Client + nilai */}
           <div className="flex justify-between items-start">
             <div>
               <div className="text-[14px] font-semibold text-[#18181B]">{deal.client.namaKlien}</div>
               <div className="text-[11.5px] text-gray-400 mt-0.5">
-                {deal.namaProject ? `${deal.namaProject} · ` : ''}{deal.service?.nama ?? '—'} · {deal.stage?.nama ?? '—'}
-                {deal.isHot && <span className="ml-1 text-[#EA580C]">🔥</span>}
+                {(editForm.namaProject || deal.namaProject) ? `${editForm.namaProject || deal.namaProject} · ` : ''}
+                {deal.service?.nama || '—'} · {stages.find(s => s.id === selectedStageId)?.nama || '—'}
+                {editForm.isHot && <span className="ml-1 text-[#EA580C]">🔥</span>}
               </div>
             </div>
             <div className="text-right">
-              <div className="text-[16px] font-bold text-[#16A34A] font-mono">Rp {formatRp(deal.nilai)}</div>
+              <div className="text-[16px] font-bold text-[#16A34A] font-mono">{formatRpFull(Number(editForm.nilai) || deal.nilai)}</div>
               <div className="text-[10.5px] text-gray-400">
-                {deal.probability}% prob · AE: {deal.assignedAe?.nama ?? '—'}
+                {editForm.probability}% prob · AE: {deal.assignedAe?.nama ?? '—'}
               </div>
             </div>
           </div>
+
+          {/* Edit fields */}
+          {showEdit && (
+            <div className="border border-[#2563EB]/20 rounded-xl bg-[#EFF6FF] px-4 py-3 flex flex-col gap-3">
+              <div className="text-[11px] font-semibold text-[#2563EB]">Edit Fields</div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10.5px] font-medium text-gray-600 block mb-1">Nilai Deal (Rp)</label>
+                  <input type="number" value={editForm.nilai} onChange={(e) => setEditForm((f) => ({ ...f, nilai: e.target.value }))} className={inputCls} />
+                </div>
+                <div>
+                  <label className="text-[10.5px] font-medium text-gray-600 block mb-1">Probabilitas (%)</label>
+                  <input type="number" min="0" max="100" value={editForm.probability} onChange={(e) => setEditForm((f) => ({ ...f, probability: e.target.value }))} className={inputCls} />
+                </div>
+              </div>
+              <div>
+                <label className="text-[10.5px] font-medium text-gray-600 block mb-1">Nama Project</label>
+                <input type="text" value={editForm.namaProject} onChange={(e) => setEditForm((f) => ({ ...f, namaProject: e.target.value }))} className={inputCls} placeholder="Yearbook 2026/27" />
+              </div>
+              <div>
+                <label className="text-[10.5px] font-medium text-gray-600 block mb-1">Status Deal</label>
+                <select value={editForm.dealStatus} onChange={(e) => setEditForm((f) => ({ ...f, dealStatus: e.target.value }))} className={inputCls}>
+                  <option value="active">Active</option>
+                  <option value="won">Won</option>
+                  <option value="lost">Lost</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <input type="checkbox" id="editIsHot" checked={editForm.isHot} onChange={(e) => setEditForm((f) => ({ ...f, isHot: e.target.checked }))} className="w-3.5 h-3.5" />
+                <label htmlFor="editIsHot" className="text-[11px] text-gray-600">Hot Deal</label>
+              </div>
+            </div>
+          )}
 
           {/* File upload zone */}
           <div className="border-t border-black/[0.06] pt-4">
@@ -464,20 +561,49 @@ function DealModal({
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t border-black/[0.06] flex justify-end gap-2">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-[12px] font-medium rounded-lg border border-black/[0.1] text-gray-600 hover:bg-gray-50 transition-colors"
-          >
-            Tutup
-          </button>
-          <button
-            onClick={handleUpdate}
-            disabled={saving}
-            className="px-4 py-2 text-[12px] font-medium rounded-lg bg-[#18181B] text-white hover:bg-[#27272A] transition-colors disabled:opacity-60"
-          >
-            {saving ? 'Menyimpan...' : 'Update Deal'}
-          </button>
+        <div className="px-5 py-3 border-t border-black/[0.06] flex items-center justify-between gap-2">
+          <div>
+            {!confirmArchive ? (
+              <button
+                onClick={() => setConfirmArchive(true)}
+                className={`px-3 py-2 text-[11.5px] font-medium rounded-lg border transition-colors ${isArchived ? 'border-gray-200 text-gray-500 hover:bg-gray-50' : 'border-red-200 text-red-500 hover:bg-red-50'}`}
+              >
+                {isArchived ? 'Kembalikan' : 'Archive'}
+              </button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className={`text-[11.5px] ${isArchived ? 'text-gray-600' : 'text-red-600'}`}>{isArchived ? 'Kembalikan deal ini?' : 'Arsipkan deal ini?'}</span>
+                <button
+                  onClick={handleArchive}
+                  disabled={archiving}
+                  className={`px-3 py-1.5 text-[11px] font-medium rounded-lg text-white disabled:opacity-60 ${isArchived ? 'bg-gray-500 hover:bg-gray-600' : 'bg-red-500 hover:bg-red-600'}`}
+                >
+                  {archiving ? '...' : isArchived ? 'Ya, Kembalikan' : 'Ya, Arsipkan'}
+                </button>
+                <button
+                  onClick={() => setConfirmArchive(false)}
+                  className="px-3 py-1.5 text-[11px] font-medium rounded-lg border border-black/[0.1] text-gray-500 hover:bg-gray-50"
+                >
+                  Batal
+                </button>
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-[12px] font-medium rounded-lg border border-black/[0.1] text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              Tutup
+            </button>
+            <button
+              onClick={handleUpdate}
+              disabled={saving}
+              className="px-4 py-2 text-[12px] font-medium rounded-lg bg-[#18181B] text-white hover:bg-[#27272A] transition-colors disabled:opacity-60"
+            >
+              {saving ? 'Menyimpan...' : 'Update Deal'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -633,6 +759,19 @@ export default function PipelinePage() {
   const totalWeighted = activeDeals.reduce((s, d) => s + d.nilai * (d.probability / 100), 0);
   const wonTotal = activeDeals.filter((d) => d.dealStatus === 'won').reduce((s, d) => s + d.nilai, 0);
 
+  const filteredDeals = deals.filter((d) => {
+    if (!showArchived && d.dealStatus === 'archived') return false;
+    if (showArchived && d.dealStatus !== 'archived') return false;
+    return true;
+  });
+  const totalPerStage: Record<string, { totalNilai: number; dealCount: number }> = {};
+  for (const d of filteredDeals) {
+    const sid = d.stageId || '';
+    if (!totalPerStage[sid]) totalPerStage[sid] = { totalNilai: 0, dealCount: 0 };
+    totalPerStage[sid].totalNilai += d.nilai;
+    totalPerStage[sid].dealCount += 1;
+  }
+
   if (loading) {
     return (
       <div className="p-6 flex items-center justify-center min-h-[300px]">
@@ -681,19 +820,22 @@ export default function PipelinePage() {
         </div>
 
         {/* Summary cards */}
-        <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${stages.length}, minmax(0,1fr))` }}>
-          {stages.map((stage) => (
-            <div key={stage.id} className="bg-white border border-black/[0.06] rounded-xl p-3 shadow-sm" style={{ borderTop: `3px solid ${stage.colorHex}` }}>
-              <div className="text-[9px] font-semibold uppercase tracking-wider mb-1 truncate" style={{ color: stage.colorHex }}>
-                {stageLabel(stage.nama)}
+        <div className="grid grid-cols-3 gap-2">
+          {stages.map((stage) => {
+            const st = totalPerStage[stage.id] || { totalNilai: 0, dealCount: 0 };
+            return (
+              <div key={stage.id} className="bg-white border border-black/[0.06] rounded-xl p-3 shadow-sm" style={{ borderTop: `3px solid ${stage.colorHex}` }}>
+                <div className="text-[9px] font-semibold uppercase tracking-wider mb-1 truncate" style={{ color: stage.colorHex }}>
+                  {stageLabel(stage.nama)}
+                </div>
+                <div className="text-[15px] font-bold font-mono text-[#18181B]">{formatRpFull(st.totalNilai)}</div>
+                <div className="text-[10px] text-gray-400 mt-0.5">
+                  {st.dealCount} deal{st.dealCount !== 1 ? 's' : ''}
+                  {stage.nama === 'Lost' && st.dealCount > 0 && ' — kembali ke DB'}
+                </div>
               </div>
-              <div className="text-[15px] font-bold font-mono text-[#18181B]">{formatRp(stage.totalNilai)}</div>
-              <div className="text-[10px] text-gray-400 mt-0.5">
-                {stage.dealCount} deal{stage.dealCount !== 1 ? 's' : ''}
-                {stage.nama === 'Lost' && stage.dealCount > 0 && ' — kembali ke DB'}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Insight */}
@@ -712,15 +854,16 @@ export default function PipelinePage() {
             >
               {showArchived ? 'Sembunyikan Archive' : 'Tampilkan Archived'}
             </button>
-            <span className="text-[11px] text-gray-400">{activeDeals.length} deal aktif</span>
+            <span className="text-[11px] text-gray-400">{showArchived ? `${filteredDeals.length} archived` : `${activeDeals.length} deal aktif`}</span>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="overflow-auto" style={{ maxHeight: 'calc(100vh - 300px)' }}>
             <div className="flex gap-3 p-4 min-w-max">
               {stages.map((stage) => {
                 const colDeals = deals.filter((d) => {
                   if (d.stageId !== stage.id) return false;
                   if (!showArchived && d.dealStatus === 'archived') return false;
+                  if (showArchived && d.dealStatus !== 'archived') return false;
                   return true;
                 });
                 const isLost = stage.nama === 'Lost';
@@ -738,16 +881,18 @@ export default function PipelinePage() {
                     onDragLeave={onDragLeave}
                     onDrop={(e) => onDrop(e, stage.id)}
                   >
-                    <div className="px-3 py-2.5 flex items-center justify-between">
-                      <span className="text-[11px] font-semibold truncate" style={{ color: isLost ? '#DC2626' : isWon ? '#16A34A' : stage.colorHex }}>
-                        {stageLabel(stage.nama)}
-                      </span>
-                      <span className="text-[10px] bg-white border border-black/[0.08] text-gray-500 rounded-full px-1.5 py-0.5 font-mono">
-                        {colDeals.length}
-                      </span>
-                    </div>
-                    <div className="text-[10px] font-mono px-3 pb-2 font-semibold" style={{ color: isWon ? '#16A34A' : isLost ? '#9CA3AF' : '#18181B' }}>
-                      Rp {formatRp(colDeals.reduce((s, d) => s + d.nilai, 0))}
+                    <div className="sticky top-0 z-10 bg-[#F9F9FB] rounded-t-xl" style={{ boxShadow: '0 1px 0 rgba(0,0,0,0.05)' }}>
+                      <div className="px-3 py-2.5 flex items-center justify-between">
+                        <span className="text-[11px] font-semibold truncate" style={{ color: isLost ? '#DC2626' : isWon ? '#16A34A' : stage.colorHex }}>
+                          {stageLabel(stage.nama)}
+                        </span>
+                        <span className="text-[10px] bg-white border border-black/[0.08] text-gray-500 rounded-full px-1.5 py-0.5 font-mono">
+                          {colDeals.length}
+                        </span>
+                      </div>
+                      <div className="text-[10px] font-mono px-3 pb-2 font-semibold" style={{ color: isWon ? '#16A34A' : isLost ? '#9CA3AF' : '#18181B' }}>
+                        Rp {formatRp(colDeals.reduce((s, d) => s + d.nilai, 0))}
+                      </div>
                     </div>
 
                     <div className="flex flex-col gap-2 px-2 pb-2 min-h-[80px]">

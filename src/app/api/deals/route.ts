@@ -9,7 +9,7 @@ export async function GET(req: Request) {
 
   try {
     const where: Record<string, unknown> = {};
-    where.dealStatus = { not: 'archived' };
+    where.dealStatus = 'won';
 
     if (search) {
       where.client = { namaKlien: { contains: search } };

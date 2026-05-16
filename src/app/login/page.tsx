@@ -2,16 +2,26 @@
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const router = useRouter();
+  const [studioName, setStudioName] = useState("CreativeOS");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/branding')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.studio_name) setStudioName(data.studio_name);
+      })
+      .catch(() => {});
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,9 +54,9 @@ export default function LoginPage() {
                 <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
               </svg>
             </div>
-            <div className="text-[18px] font-semibold text-white tracking-[-0.3px]">CreativeOS</div>
+            <div className="text-[18px] font-semibold text-white tracking-[-0.3px]">{studioName}</div>
           </div>
-          <div className="text-[12px] text-white/50">Sales Operating System</div>
+          <div className="text-[12px] text-white/50">Sales &amp; CRM Operating System</div>
         </div>
 
         {/* Form Body */}

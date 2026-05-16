@@ -147,6 +147,7 @@ model Client {
   deals       Deal[]
   activities  Activity[]
   invoices    Invoice[]
+  messageLogs MessageLog[]
 
   @@map("clients")
 }
@@ -264,11 +265,81 @@ model Invoice {
   updatedAt     DateTime @updatedAt
 
   // Relations
-  client    Client @relation(fields: [clientId], references: [id])
-  deal      Deal?  @relation(fields: [dealId], references: [id])
-  createdBy User?  @relation(fields: [createdById], references: [id])
+  client    Client            @relation(fields: [clientId], references: [id])
+  deal      Deal?             @relation(fields: [dealId], references: [id])
+  createdBy User?             @relation(fields: [createdById], references: [id])
+  documents InvoiceDocument[]
+  terms     InvoiceTerm[]
+  messageLogs MessageLog[]
 
   @@map("invoices")
+}
+
+model InvoiceTerm {
+  id         String    @id @default(cuid())
+  invoiceId  String
+  terminKe   Int       // 1, 2, 3...
+  percentage Float?    // optional, e.g. 30 for 30%
+  amount     Float
+  jatuhTempo DateTime
+  status     String    @default("pending") // pending | paid | overdue
+  paidAt     DateTime?
+  paidAmount Float?    @default(0)
+  keterangan String?   @db.Text
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  invoice   Invoice             @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  documents InvoiceTermDocument[]
+
+  @@map("invoice_terms")
+}
+
+model InvoiceDocument {
+  id           String   @id @default(cuid())
+  invoiceId    String
+  fileName     String   @db.Text
+  fileType     String?
+  fileSizeBytes Int?
+  fileUrl      String?  @db.Text
+  uploadedAt   DateTime @default(now())
+
+  // Relations
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@map("invoice_documents")
+}
+
+model InvoiceTermDocument {
+  id           String   @id @default(cuid())
+  termId       String
+  fileName     String   @db.Text
+  fileType     String?
+  fileSizeBytes Int?
+  fileUrl      String?  @db.Text
+  uploadedAt   DateTime @default(now())
+
+  term InvoiceTerm @relation(fields: [termId], references: [id], onDelete: Cascade)
+
+  @@map("invoice_term_documents")
+}
+
+model MessageLog {
+  id          String    @id @default(cuid())
+  invoiceId   String?
+  clientId    String?
+  clientName  String?
+  phoneNumber String?
+  message     String    @db.Text
+  messageType String    @default("invoice") // invoice | reminder | payment
+  status      String    @default("sent") // sent | failed
+  sentAt      DateTime  @default(now())
+  error       String?   @db.Text
+
+  invoice Invoice? @relation(fields: [invoiceId], references: [id])
+  client  Client?  @relation(fields: [clientId], references: [id])
+
+  @@map("message_logs")
 }
 
 model KpiTarget {

@@ -118,19 +118,19 @@ export default function Dashboard() {
         <div className="bg-white border border-black/[.07] rounded-xl shadow-sm px-4 py-3 relative overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-[3px] bg-blue-500" />
           <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Monthly Revenue</div>
-          <div className="text-[18px] font-bold font-mono mt-1">{formatRpShort(data.monthlyRevenue)}</div>
+          <div className="text-[18px] font-bold font-mono mt-1">{formatRp(data.monthlyRevenue)}</div>
           <div className="text-[10px] text-blue-600 mt-0.5">Invoice Paid saja</div>
         </div>
         <div className="bg-white border border-black/[.07] rounded-xl shadow-sm px-4 py-3 relative overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-[3px] bg-green-500" />
           <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Yearly Revenue</div>
-          <div className="text-[18px] font-bold font-mono mt-1 text-green-600">{formatRpShort(data.yearlyRevenue)}</div>
+          <div className="text-[18px] font-bold font-mono mt-1 text-green-600">{formatRp(data.yearlyRevenue)}</div>
           <div className="text-[10px] text-green-600 mt-0.5">{now.getFullYear()} YTD</div>
         </div>
         <div className="bg-white border border-black/[.07] rounded-xl shadow-sm px-4 py-3 relative overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-[3px] bg-red-500" />
           <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Outstanding</div>
-          <div className="text-[18px] font-bold font-mono mt-1 text-red-600">{formatRpShort(data.outstandingTotal)}</div>
+          <div className="text-[18px] font-bold font-mono mt-1 text-red-600">{formatRp(data.outstandingTotal)}</div>
           <div className="text-[10px] text-red-600 mt-0.5">{data.unpaidCount} unpaid invoice</div>
         </div>
         <div className="bg-white border border-black/[.07] rounded-xl shadow-sm px-4 py-3 relative overflow-hidden">

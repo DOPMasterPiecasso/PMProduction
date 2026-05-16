@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { Search, Loader2, ChevronDown, ChevronRight, Upload, Trash2 } from 'lucide-react';
+import { useEffect, useState, useCallback, useRef, Fragment } from 'react';
+import { Search, Loader2, ChevronDown, ChevronRight, Upload, Trash2, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
-import { Input } from '@/components/ui/input';
 
 interface DealClient {
   id: string; namaKlien: string; namaContact: string | null; noHp: string | null;
@@ -270,6 +269,156 @@ function DocLink({ doc, onDelete }: { doc: DealDoc; onDelete?: () => void }) {
   );
 }
 
+// ─── Edit Deal Modal ──────────────────────────────────────────
+function EditDealModal({
+  deal,
+  onClose,
+  onUpdated,
+}: {
+  deal: Deal;
+  onClose: () => void;
+  onUpdated: () => void;
+}) {
+  const [meta, setMeta] = useState<{ clients: {id: string, namaKlien: string}[]; services: DealService[]; stages: DealStage[]; aes: DealUser[] } | null>(null);
+  const [form, setForm] = useState({
+    clientId: deal.client.id,
+    serviceId: deal.service?.id || '',
+    stageId: deal.stage?.id || '',
+    assignedAeId: deal.assignedAe?.id || '',
+    nilai: String(deal.nilai),
+    probability: String(deal.probability),
+    notes: deal.notes || '',
+    namaProject: '',
+    isHot: deal.isHot,
+    dealStatus: deal.dealStatus,
+  });
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/pipeline/meta')
+      .then((r) => r.json())
+      .then((data) => {
+        setMeta(data);
+      })
+      .catch(() => toast.error('Gagal memuat data form'));
+  }, []);
+
+  const inputCls = 'w-full text-[12px] border border-black/[0.1] rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-[#18181B]/10 text-[#18181B] placeholder:text-gray-300';
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/deals/${deal.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          serviceId: form.serviceId || null,
+          stageId: form.stageId || null,
+          assignedAeId: form.assignedAeId || null,
+          nilai: Number(form.nilai) || 0,
+          probability: Number(form.probability) || 0,
+          notes: form.notes || null,
+          isHot: form.isHot,
+          dealStatus: form.dealStatus,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success('Deal berhasil diupdate');
+      onUpdated();
+      onClose();
+    } catch {
+      toast.error('Gagal mengupdate deal');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-black/[0.07]">
+          <span className="text-[14px] font-semibold">Edit Deal</span>
+          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 text-[16px]">×</button>
+        </div>
+        {!meta ? (
+          <div className="flex justify-center items-center py-10">
+            <div className="w-6 h-6 border-2 border-[#18181B] border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : (
+          <div className="px-5 py-4 flex flex-col gap-3 max-h-[70vh] overflow-y-auto">
+            <div>
+              <label className="text-[11.5px] font-medium text-gray-600 block mb-1">Client</label>
+              <input type="text" value={deal.client.namaKlien} disabled className={`${inputCls} opacity-60`} />
+            </div>
+            <div>
+              <label className="text-[11.5px] font-medium text-gray-600 block mb-1">Nama Project</label>
+              <input type="text" placeholder="Yearbook 2026/27" value={form.namaProject} onChange={(e) => setForm((f) => ({ ...f, namaProject: e.target.value }))} className={inputCls} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[11.5px] font-medium text-gray-600 block mb-1">Layanan</label>
+                <select value={form.serviceId} onChange={(e) => setForm((f) => ({ ...f, serviceId: e.target.value }))} className={inputCls}>
+                  <option value="">— Pilih Layanan —</option>
+                  {meta.services.map((s) => <option key={s.id} value={s.id}>{s.nama}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-[11.5px] font-medium text-gray-600 block mb-1">Stage</label>
+                <select value={form.stageId} onChange={(e) => setForm((f) => ({ ...f, stageId: e.target.value }))} className={inputCls}>
+                  <option value="">— Pilih Stage —</option>
+                  {meta.stages.filter((s) => !['Lost', 'Won'].includes(s.nama)).map((s) => <option key={s.id} value={s.id}>{s.nama}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[11.5px] font-medium text-gray-600 block mb-1">Nilai Deal (Rp)</label>
+                <input type="number" placeholder="35000000" value={form.nilai} onChange={(e) => setForm((f) => ({ ...f, nilai: e.target.value }))} className={inputCls} />
+              </div>
+              <div>
+                <label className="text-[11.5px] font-medium text-gray-600 block mb-1">Probabilitas (%)</label>
+                <input type="number" min="0" max="100" value={form.probability} onChange={(e) => setForm((f) => ({ ...f, probability: e.target.value }))} className={inputCls} />
+              </div>
+            </div>
+            <div>
+              <label className="text-[11.5px] font-medium text-gray-600 block mb-1">Deal Owner (AE)</label>
+              <select value={form.assignedAeId} onChange={(e) => setForm((f) => ({ ...f, assignedAeId: e.target.value }))} className={inputCls}>
+                <option value="">— Pilih AE —</option>
+                {meta.aes.map((u) => <option key={u.id} value={u.id}>{u.nama}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-[11.5px] font-medium text-gray-600 block mb-1">Status Deal</label>
+              <select value={form.dealStatus} onChange={(e) => setForm((f) => ({ ...f, dealStatus: e.target.value }))} className={inputCls}>
+                <option value="active">Active</option>
+                <option value="won">Won</option>
+                <option value="lost">Lost</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="checkbox" id="isHot" checked={form.isHot} onChange={(e) => setForm((f) => ({ ...f, isHot: e.target.checked }))} className="w-3.5 h-3.5" />
+              <label htmlFor="isHot" className="text-[11.5px] text-gray-600">Hot Deal</label>
+            </div>
+            <div>
+              <label className="text-[11.5px] font-medium text-gray-600 block mb-1">Catatan</label>
+              <textarea rows={3} placeholder="Catatan..." value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} className={`${inputCls} resize-none`} />
+            </div>
+          </div>
+        )}
+        <div className="px-5 py-3 border-t border-black/[0.06] flex justify-end gap-2">
+          <button onClick={onClose} className="px-4 py-2 text-[12px] font-medium rounded-lg border border-black/[0.1] text-gray-600 hover:bg-gray-50">Batal</button>
+          <button onClick={handleSave} disabled={saving || !meta} className="px-4 py-2 text-[12px] font-medium rounded-lg bg-[#18181B] text-white hover:bg-[#27272A] disabled:opacity-60">
+            {saving ? 'Menyimpan...' : 'Simpan'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function DealsPage() {
   const [deals, setDeals] = useState<Deal[]>([]);
   const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
@@ -277,13 +426,13 @@ export default function DealsPage() {
   const [stats, setStats] = useState({ totalDeals: 0, totalNilai: 0, wonCount: 0, wonNilai: 0 });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
   const [filterService, setFilterService] = useState('');
   const [expandedDeal, setExpandedDeal] = useState<string | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadingRow, setUploadingRow] = useState<string | null>(null);
   const [chartOffset, setChartOffset] = useState(0);
   const [savingNote, setSavingNote] = useState<string | null>(null);
+  const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
   const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const fetchDeals = useCallback(async () => {
@@ -326,22 +475,11 @@ export default function DealsPage() {
     }
   }
 
-  function isProduction(d: Deal) {
-    return d.dealStatus === 'active' && (d.stage?.nama === 'Meeting' || d.stage?.nama === 'Negotiation');
-  }
-  function isConfirmed(d: Deal) {
-    return d.dealStatus === 'active' && d.stage && d.stage.urutan < 4;
-  }
   function isDone(d: Deal) {
     return d.dealStatus === 'won';
   }
 
-  const filteredDeals = deals.filter((d) => {
-    if (filterStatus === 'Production') return isProduction(d);
-    if (filterStatus === 'Confirmed') return isConfirmed(d);
-    if (filterStatus === 'Done') return isDone(d);
-    return isProduction(d) || isConfirmed(d) || isDone(d);
-  });
+  const filteredDeals = deals.filter((d) => isDone(d));
 
   const maxOffset = Math.max(0, monthlyData.length - 6);
   const dealMonths = monthlyData.slice(-6 - chartOffset, monthlyData.length - chartOffset || undefined);
@@ -362,12 +500,19 @@ export default function DealsPage() {
           onUploaded={fetchDeals}
         />
       )}
+      {editingDeal && (
+        <EditDealModal
+          deal={editingDeal}
+          onClose={() => setEditingDeal(null)}
+          onUpdated={fetchDeals}
+        />
+      )}
 
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-[20px] font-semibold tracking-[-0.3px]">Deal Clients</h1>
-          <p className="text-[13px] text-gray-400 mt-0.5">Klien yang sudah deal - evaluasi per bulan</p>
+          <p className="text-[13px] text-gray-400 mt-0.5">Deal (Won) — evaluasi per bulan</p>
         </div>
         <button
           onClick={() => setShowUploadModal(true)}
@@ -441,12 +586,7 @@ export default function DealsPage() {
             className="text-[12px] bg-transparent outline-none flex-1 placeholder:text-gray-300"
           />
         </div>
-        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="text-[12px] border border-black/10 rounded-lg px-3 py-2 bg-white focus:outline-none">
-          <option value="">Semua Status</option>
-          <option value="Production">Production</option>
-          <option value="Confirmed">Confirmed</option>
-          <option value="Done">Done</option>
-        </select>
+        <span className="text-[12px] px-3 py-2 bg-gray-100 rounded-lg text-gray-500 font-medium">Done</span>
         <select value={filterService} onChange={(e) => setFilterService(e.target.value)} className="text-[12px] border border-black/10 rounded-lg px-3 py-2 bg-white focus:outline-none">
           <option value="">Semua Layanan</option>
           {meta.services.map((s) => <option key={s.id} value={s.id}>{s.nama}</option>)}
@@ -461,7 +601,7 @@ export default function DealsPage() {
           </div>
         ) : filteredDeals.length === 0 ? (
           <div className="text-center py-14 text-gray-400 text-[13px]">
-            {search || filterStatus || filterService ? 'Tidak ada deal yang cocok.' : 'Belum ada deal.'}
+            {search || filterService ? 'Tidak ada deal yang cocok.' : 'Belum ada deal.'}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -488,8 +628,8 @@ export default function DealsPage() {
                   const info = [kota, svc, contact, hp].filter(Boolean).join(' - ');
 
                   return (
-                    <>
-                      <tr key={deal.id} className="border-b border-black/5 hover:bg-gray-50/50 cursor-pointer" onClick={() => setExpandedDeal(isOpen ? null : deal.id)}>
+                    <Fragment key={deal.id}>
+                      <tr className="border-b border-black/5 hover:bg-gray-50/50 cursor-pointer" onClick={() => setExpandedDeal(isOpen ? null : deal.id)}>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1">
                             {isOpen ? <ChevronDown className="w-3 h-3 text-gray-400" /> : <ChevronRight className="w-3 h-3 text-gray-400" />}
@@ -515,7 +655,8 @@ export default function DealsPage() {
                         <td className="px-4 py-3 text-[11px] text-blue-600">
                           {deal.documents.length > 0 ? `${deal.documents.length} files` : '-'}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 flex gap-1">
+                          <button onClick={(e) => { e.stopPropagation(); setEditingDeal(deal); }} className="text-[11px] px-2 py-1 rounded-md border border-black/10 text-gray-600 hover:bg-gray-100 inline-flex items-center gap-1"><Pencil className="w-3 h-3" />Edit</button>
                           <button onClick={(e) => { e.stopPropagation(); setExpandedDeal(isOpen ? null : deal.id); }} className="text-[11px] px-2.5 py-1 rounded-md border border-black/10 text-gray-600 hover:bg-gray-100">Detail</button>
                         </td>
                       </tr>
@@ -579,7 +720,7 @@ export default function DealsPage() {
                           </td>
                         </tr>
                       )}
-                    </>
+                    </Fragment>
                   );
                 })}
               </tbody>

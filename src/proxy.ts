@@ -7,7 +7,8 @@ export async function proxy(req: NextRequest) {
 
   const isLoginPage = pathname === "/login";
   const isAuthApi = pathname.startsWith("/api/auth");
-  const isPublic = isLoginPage || isAuthApi;
+  const isBranding = pathname === "/api/branding";
+  const isPublic = isLoginPage || isAuthApi || isBranding;
 
   if (token && isLoginPage) {
     return NextResponse.redirect(new URL("/", req.url));
