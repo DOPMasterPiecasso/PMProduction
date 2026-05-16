@@ -20,8 +20,8 @@ interface Deal {
   deadline: string | null;
   stageId: string | null;
   client: { namaKlien: string };
-  service: { nama: string; colorHex: string } | null;
-  assignedAe: { nama: string; avatarInitial: string | null } | null;
+  service: { id: string; nama: string; colorHex: string } | null;
+  assignedAe: { id: string; nama: string; avatarInitial: string | null } | null;
   stage: { nama: string; urutan: number; colorHex: string } | null;
   documents: { id: string; fileName: string; fileUrl: string | null }[];
 }
