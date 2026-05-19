@@ -10,7 +10,8 @@ export async function proxy(req: NextRequest) {
   const isBranding = pathname === "/api/branding";
   const isInvoicePage = pathname.startsWith("/invoice/");
   const isInvoiceApi = /^\/api\/invoices\/[^/]+$/.test(pathname) && req.method !== "DELETE";
-  const isPublic = isLoginPage || isAuthApi || isBranding || isInvoicePage || isInvoiceApi;
+  const isUpload = pathname.startsWith("/uploads/");
+  const isPublic = isLoginPage || isAuthApi || isBranding || isInvoicePage || isInvoiceApi || isUpload;
 
   if (token && isLoginPage) {
     return NextResponse.redirect(new URL("/", req.url));
