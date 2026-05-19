@@ -10,8 +10,7 @@ export async function proxy(req: NextRequest) {
   const isBranding = pathname === "/api/branding";
   const isInvoicePage = pathname.startsWith("/invoice/");
   const isInvoiceApi = /^\/api\/invoices\/[^/]+$/.test(pathname) && req.method !== "DELETE";
-  const isUpload = pathname.startsWith("/uploads/");
-  const isPublic = isLoginPage || isAuthApi || isBranding || isInvoicePage || isInvoiceApi || isUpload;
+  const isPublic = isLoginPage || isAuthApi || isBranding || isInvoicePage || isInvoiceApi;
 
   if (token && isLoginPage) {
     return NextResponse.redirect(new URL("/", req.url));
@@ -27,5 +26,5 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|uploads/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|pdf)$).*)"],
 };
