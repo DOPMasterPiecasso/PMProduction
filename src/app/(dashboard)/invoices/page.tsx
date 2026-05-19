@@ -4,8 +4,9 @@ import React, { Suspense, useEffect, useState, useCallback, useRef } from 'react
 import { useSearchParams } from 'next/navigation';
 import { Search, Loader2, Plus, Upload, Bell, Save, Trash2, FileText, ChevronDown, ChevronRight, List, ExternalLink, Send, CheckCircle2, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { renderTemplate, DEFAULT_TEMPLATE_TERM, DEFAULT_TEMPLATE_TERM_PAYMENT } from '@/lib/whatsapp';
 
-interface InvoiceClient { id: string; namaKlien: string }
+interface InvoiceClient { id: string; namaKlien: string; invoiceAccessCode?: string | null }
 interface InvDoc { id: string; fileName: string; fileType: string | null; fileSizeBytes: number | null; fileUrl: string | null; uploadedAt: string }
 interface InvTerm { id: string; terminKe: number; percentage: number | null; amount: number; jatuhTempo: string; status: string; paidAt: string | null; paidAmount: number | null; keterangan: string | null; documents?: InvDoc[] }
 interface Invoice {
@@ -163,7 +164,7 @@ function InvoiceFilesModal({ invoice, onClose }: { invoice: Invoice; onClose: ()
   );
 }
 
-function TerminModal({ invoice, onClose, onUpdated }: { invoice: Invoice; onClose: () => void; onUpdated: () => void }) {
+function TerminModal({ invoice, onClose, onUpdated, onSendTerm }: { invoice: Invoice; onClose: () => void; onUpdated: () => void; onSendTerm?: (term: InvTerm) => void }) {
   const [terms, setTerms] = useState<InvTerm[]>(invoice.terms || []);
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -405,6 +406,9 @@ function TerminModal({ invoice, onClose, onUpdated }: { invoice: Invoice; onClos
                       <div className="flex items-center gap-2">
                         <span className="text-[13px] font-mono font-semibold">{formatRp(t.amount)}</span>
                         <div className="flex gap-1 ml-2">
+                          <button onClick={() => onSendTerm?.(t)}
+                            className="w-6 h-6 flex items-center justify-center rounded text-green-500 hover:text-green-700 hover:bg-green-50"
+                            title="Kirim WhatsApp Termin"><Send className="w-3 h-3" /></button>
                           <button onClick={() => openEdit(t)}
                             className="w-6 h-6 flex items-center justify-center rounded text-gray-400 hover:text-blue-600 hover:bg-blue-50 text-[11px]"
                             title="Edit">✎</button>
@@ -622,6 +626,201 @@ function SendInvoiceModal({ invoice, onClose, onSent }: { invoice: Invoice; onCl
   );
 }
 
+function SendTermModal({ invoice, term, onClose, onSent }: { invoice: Invoice; term: InvTerm; onClose: () => void; onSent: () => void }) {
+  const [sending, setSending] = useState(false);
+  const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [messageType, setMessageType] = useState<'term_reminder' | 'term_payment_confirm'>('term_reminder');
+  const [customMessage, setCustomMessage] = useState('');
+
+  useEffect(() => {
+    const due = new Date(term.jatuhTempo);
+    const dueStr = due.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    const nominal = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(term.amount);
+    const accessCode = invoice.client.invoiceAccessCode;
+    const vars: Record<string, string> = {
+      namaKlien: invoice.client.namaKlien,
+      nomorInvoice: invoice.nomorInvoice,
+      namaProject: invoice.namaProject || '-',
+      nominal,
+      jatuhTempo: dueStr,
+      terminKe: String(term.terminKe),
+      nominalTermin: nominal,
+      jatuhTempoTermin: dueStr,
+      kodeAkses: accessCode ? `*Kode Akses:* ${accessCode}\n` : '',
+      linkInvoice: `*Link Invoice:* ${window.location.origin}/invoice/${invoice.id}\n`,
+      namaStudio: 'CreativeOS',
+    };
+    const template = messageType === 'term_payment_confirm' ? DEFAULT_TEMPLATE_TERM_PAYMENT : DEFAULT_TEMPLATE_TERM;
+    setCustomMessage(renderTemplate(template, vars));
+  }, [invoice, term, messageType]);
+
+  async function handleSend() {
+    if (!customMessage.trim()) { toast.error('Pesan tidak boleh kosong'); return; }
+    setSending(true);
+    setResult(null);
+    try {
+      const res = await fetch('/api/invoices/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          invoiceId: invoice.id,
+          message: customMessage,
+          messageType: messageType === 'term_payment_confirm' ? 'payment_confirm' : 'invoice',
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Gagal mengirim');
+      setResult({ success: true, message: 'Pesan berhasil dikirim via WhatsApp' });
+      onSent();
+    } catch (e) {
+      setResult({ success: false, message: e instanceof Error ? e.message : 'Gagal mengirim pesan' });
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-black/[0.07]">
+          <span className="text-[14px] font-semibold">Kirim Termin via WhatsApp</span>
+          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 text-[16px]">×</button>
+        </div>
+        <div className="px-5 py-4 flex flex-col gap-4">
+          <div className="bg-gray-50 rounded-xl px-4 py-3">
+            <div className="text-[11px] text-gray-500">{invoice.nomorInvoice} — {invoice.client.namaKlien}</div>
+            <div className="text-[13px] font-semibold mt-0.5">Termin {term.terminKe} — {formatRp(term.amount)}</div>
+            <div className="text-[11px] text-gray-500 mt-1">Jatuh tempo: {new Date(term.jatuhTempo).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+          </div>
+
+          <div>
+            <label className="text-[11.5px] font-medium text-gray-600 block mb-1.5">Tipe Pesan</label>
+            <div className="flex gap-2">
+              <button onClick={() => { if (!sending && !result?.success) setMessageType('term_reminder'); }}
+                className={`flex-1 text-[11px] px-3 py-2 rounded-lg border font-medium ${messageType === 'term_reminder' ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-black/10 text-gray-600 hover:bg-gray-50'}`}
+              >Pengingat Termin</button>
+              <button onClick={() => { if (!sending && !result?.success) setMessageType('term_payment_confirm'); }}
+                className={`flex-1 text-[11px] px-3 py-2 rounded-lg border font-medium ${messageType === 'term_payment_confirm' ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-black/10 text-gray-600 hover:bg-gray-50'}`}
+              >Konfirmasi Bayar</button>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[11.5px] font-medium text-gray-600 block mb-1.5">
+              Pesan <span className="text-gray-400 font-normal">(bisa diedit)</span>
+            </label>
+            <textarea value={customMessage} onChange={(e) => setCustomMessage(e.target.value)}
+              className="w-full text-[12px] border border-black/10 rounded-lg px-3 py-2.5 focus:outline-none focus:border-blue-400 resize-y min-h-[120px] leading-relaxed"
+              rows={8}
+            />
+          </div>
+
+          {result && (
+            <div className={`flex items-start gap-2 px-3 py-2.5 rounded-lg text-[12px] ${result.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+              {result.success ? <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" /> : <XCircle className="w-4 h-4 shrink-0 mt-0.5" />}
+              <span>{result.message}</span>
+            </div>
+          )}
+        </div>
+        <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-black/[0.07]">
+          <button onClick={onClose} className="text-[12px] px-4 py-2 rounded-lg border border-black/10 text-gray-600 hover:bg-gray-50">
+            {result?.success ? 'Tutup' : 'Batal'}
+          </button>
+          {!result?.success && (
+            <button onClick={handleSend} disabled={sending}
+              className="bg-green-600 text-white text-[12px] px-4 py-2 rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 flex items-center gap-1.5"
+            >{sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />} {sending ? 'Mengirim...' : 'Kirim WhatsApp'}</button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ReminderModal({ invoice, onClose }: { invoice: Invoice; onClose: () => void }) {
+  const [reminders, setReminders] = useState<Record<number, boolean>>({});
+  const [availableDays, setAvailableDays] = useState<number[]>([1, 3, 5, 7]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState<number | null>(null);
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [remRes, settingsRes] = await Promise.all([
+        fetch(`/api/invoices/${invoice.id}/reminders`),
+        fetch('/api/settings'),
+      ]);
+      const remData = await remRes.json();
+      const settingsData = await settingsRes.json();
+      const days: number[] = JSON.parse(settingsData.systemSettings?.invoice_reminder_days || '[1,3,5,7]');
+      setAvailableDays(days);
+      const map: Record<number, boolean> = {};
+      for (const r of remData.reminders || []) map[r.daysBefore] = r.isActive;
+      setReminders(map);
+    } catch { toast.error('Gagal memuat data reminder'); }
+    finally { setLoading(false); }
+  }, [invoice.id]);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  async function toggleReminder(daysBefore: number, active: boolean) {
+    setSaving(daysBefore);
+    try {
+      const res = await fetch(`/api/invoices/${invoice.id}/reminders`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ daysBefore, isActive: active }),
+      });
+      if (!res.ok) throw new Error();
+      setReminders((prev) => ({ ...prev, [daysBefore]: active }));
+      toast.success(active ? 'Reminder diaktifkan' : 'Reminder dinonaktifkan');
+    } catch { toast.error('Gagal menyimpan reminder'); }
+    finally { setSaving(null); }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-black/[0.07]">
+          <span className="text-[14px] font-semibold">Reminder Otomatis</span>
+          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 text-[16px]">×</button>
+        </div>
+        <div className="px-5 py-4 flex flex-col gap-3">
+          <div className="bg-gray-50 rounded-xl px-4 py-3">
+            <div className="text-[11px] text-gray-500">{invoice.nomorInvoice} — {invoice.client.namaKlien}</div>
+            <div className="text-[13px] font-semibold mt-0.5">{formatRp(invoice.nominal)}</div>
+          </div>
+          {loading ? (
+            <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 animate-spin text-gray-300" /></div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {availableDays.map((day) => {
+                const active = !!reminders[day];
+                return (
+                  <label key={day} className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors ${active ? 'border-blue-300 bg-blue-50' : 'border-black/10 hover:bg-gray-50'}`}>
+                    <input type="checkbox" checked={active} disabled={saving === day} onChange={() => toggleReminder(day, !active)} className="rounded" />
+                    <div className="flex-1">
+                      <span className="text-[12.5px] font-medium">H-{day}</span>
+                      <span className="text-[11px] text-gray-400 ml-2">{day === 1 ? 'Besok' : `${day} hari sebelum jatuh tempo`}</span>
+                    </div>
+                    {saving === day && <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-400" />}
+                  </label>
+                );
+              })}
+              {availableDays.length === 0 && (
+                <p className="text-[12px] text-gray-400 text-center py-4">Tidak ada opsi reminder. Atur di Settings &gt; Pengaturan Reminder Invoice.</p>
+              )}
+            </div>
+          )}
+        </div>
+        <div className="flex justify-end px-5 py-3 border-t border-black/[0.07]">
+          <button onClick={onClose} className="text-[12px] px-4 py-2 rounded-lg bg-[#18181B] text-white hover:opacity-85">Tutup</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function InvoicesPage() {
   const searchParams = useSearchParams();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -635,6 +834,9 @@ function InvoicesPage() {
   const [filesInvoice, setFilesInvoice] = useState<Invoice | null>(null);
   const [terminInvoice, setTerminInvoice] = useState<Invoice | null>(null);
   const [sendInvoice, setSendInvoice] = useState<Invoice | null>(null);
+  const [sendTermInvoice, setSendTermInvoice] = useState<Invoice | null>(null);
+  const [sendTerm, setSendTerm] = useState<InvTerm | null>(null);
+  const [reminderInvoice, setReminderInvoice] = useState<Invoice | null>(null);
   const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
 
   const fetchInvoices = useCallback(async () => {
@@ -700,8 +902,10 @@ function InvoicesPage() {
     <div className="p-[20px_24px] flex flex-col gap-[16px]">
       {showCreate && <CreateInvoiceModal onClose={() => setShowCreate(false)} onCreated={fetchInvoices} />}
       {filesInvoice && <InvoiceFilesModal invoice={filesInvoice} onClose={() => { setFilesInvoice(null); fetchInvoices(); }} />}
-      {terminInvoice && <TerminModal invoice={terminInvoice} onClose={() => setTerminInvoice(null)} onUpdated={fetchInvoices} />}
+      {terminInvoice && <TerminModal invoice={terminInvoice} onClose={() => setTerminInvoice(null)} onUpdated={fetchInvoices} onSendTerm={(term) => { setSendTermInvoice(terminInvoice); setSendTerm(term); }} />}
       {sendInvoice && <SendInvoiceModal invoice={sendInvoice} onClose={() => setSendInvoice(null)} onSent={fetchInvoices} />}
+      {sendTermInvoice && sendTerm && <SendTermModal invoice={sendTermInvoice} term={sendTerm} onClose={() => { setSendTermInvoice(null); setSendTerm(null); }} onSent={fetchInvoices} />}
+      {reminderInvoice && <ReminderModal invoice={reminderInvoice} onClose={() => setReminderInvoice(null)} />}
 
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
@@ -815,6 +1019,9 @@ function InvoicesPage() {
                                   <option value="overdue">Overdue</option>
                                 </select>
                                 <div className="flex gap-1 ml-auto">
+                                  <button onClick={(e) => { e.stopPropagation(); setReminderInvoice(inv); }}
+                                    className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-md border border-black/10 text-amber-600 hover:bg-amber-50"
+                                  ><Bell className="w-3 h-3" /> Reminder</button>
                                   <button onClick={(e) => { e.stopPropagation(); setSendInvoice(inv); }}
                                     className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-md border border-black/10 text-green-600 hover:bg-green-50"
                                   ><Send className="w-3 h-3" /> WA</button>

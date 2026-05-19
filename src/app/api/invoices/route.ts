@@ -18,7 +18,7 @@ export async function GET(req: Request) {
     const invoices = await prisma.invoice.findMany({
       where,
       include: {
-        client: { select: { id: true, namaKlien: true } },
+        client: { select: { id: true, namaKlien: true, invoiceAccessCode: true } },
         documents: { select: { id: true, fileName: true, fileType: true, fileSizeBytes: true, fileUrl: true, uploadedAt: true } },
         terms: {
           orderBy: { terminKe: 'asc' },
@@ -44,7 +44,7 @@ export async function GET(req: Request) {
     let overdueTotal = 0;
     let overdueCount = 0;
 
-    for (const inv of invoices as { id: string; clientId: string; dealId: string | null; nomorInvoice: string; namaProject: string | null; nominal: number; tanggalTerbit: Date; jatuhTempo: Date; status: string; keterangan: string | null; paidAmount: number | null; createdById: string | null; createdAt: Date; updatedAt: Date; client: { id: string; namaKlien: string } }[]) {
+    for (const inv of invoices as { id: string; clientId: string; dealId: string | null; nomorInvoice: string; namaProject: string | null; nominal: number; tanggalTerbit: Date; jatuhTempo: Date; status: string; keterangan: string | null; paidAmount: number | null; createdById: string | null; createdAt: Date; updatedAt: Date; client: { id: string; namaKlien: string; invoiceAccessCode: string | null } }[]) {
       const remaining = inv.nominal - (inv.paidAmount || 0);
       const isPastDue = new Date(inv.jatuhTempo) < now;
 
@@ -112,7 +112,7 @@ export async function POST(req: Request) {
         paidAmount: status === 'paid' ? parseFloat(nominal) : 0,
         createdById: createdById || null,
       },
-      include: { client: { select: { id: true, namaKlien: true } } },
+      include: { client: { select: { id: true, namaKlien: true, invoiceAccessCode: true } } },
     });
 
     return NextResponse.json({ success: true, invoice });
@@ -156,7 +156,7 @@ export async function PATCH(req: Request) {
       await recalcInvoiceStatus(id);
       const invoice = await prisma.invoice.findUnique({
         where: { id },
-        include: { client: { select: { id: true, namaKlien: true } }, terms: { orderBy: { terminKe: 'asc' }, include: { documents: { select: { id: true, fileName: true, fileType: true, fileSizeBytes: true, fileUrl: true, uploadedAt: true } } } } },
+        include: { client: { select: { id: true, namaKlien: true, invoiceAccessCode: true } }, terms: { orderBy: { terminKe: 'asc' }, include: { documents: { select: { id: true, fileName: true, fileType: true, fileSizeBytes: true, fileUrl: true, uploadedAt: true } } } } },
       });
       return NextResponse.json({ success: true, invoice });
     }
@@ -176,7 +176,7 @@ export async function PATCH(req: Request) {
       await recalcInvoiceStatus(id);
       const invoice = await prisma.invoice.findUnique({
         where: { id },
-        include: { client: { select: { id: true, namaKlien: true } }, terms: { orderBy: { terminKe: 'asc' }, include: { documents: { select: { id: true, fileName: true, fileType: true, fileSizeBytes: true, fileUrl: true, uploadedAt: true } } } } },
+        include: { client: { select: { id: true, namaKlien: true, invoiceAccessCode: true } }, terms: { orderBy: { terminKe: 'asc' }, include: { documents: { select: { id: true, fileName: true, fileType: true, fileSizeBytes: true, fileUrl: true, uploadedAt: true } } } } },
       });
       return NextResponse.json({ success: true, invoice });
     }
@@ -192,7 +192,7 @@ export async function PATCH(req: Request) {
       await recalcInvoiceStatus(id);
       const invoice = await prisma.invoice.findUnique({
         where: { id },
-        include: { client: { select: { id: true, namaKlien: true } }, terms: { orderBy: { terminKe: 'asc' }, include: { documents: { select: { id: true, fileName: true, fileType: true, fileSizeBytes: true, fileUrl: true, uploadedAt: true } } } } },
+        include: { client: { select: { id: true, namaKlien: true, invoiceAccessCode: true } }, terms: { orderBy: { terminKe: 'asc' }, include: { documents: { select: { id: true, fileName: true, fileType: true, fileSizeBytes: true, fileUrl: true, uploadedAt: true } } } } },
       });
       return NextResponse.json({ success: true, invoice });
     }
@@ -202,7 +202,7 @@ export async function PATCH(req: Request) {
       await recalcInvoiceStatus(id);
       const invoice = await prisma.invoice.findUnique({
         where: { id },
-        include: { client: { select: { id: true, namaKlien: true } }, terms: { orderBy: { terminKe: 'asc' }, include: { documents: { select: { id: true, fileName: true, fileType: true, fileSizeBytes: true, fileUrl: true, uploadedAt: true } } } } },
+        include: { client: { select: { id: true, namaKlien: true, invoiceAccessCode: true } }, terms: { orderBy: { terminKe: 'asc' }, include: { documents: { select: { id: true, fileName: true, fileType: true, fileSizeBytes: true, fileUrl: true, uploadedAt: true } } } } },
       });
       return NextResponse.json({ success: true, invoice });
     }
@@ -224,7 +224,7 @@ export async function PATCH(req: Request) {
     const invoice = await prisma.invoice.update({
       where: { id },
       data: updateData,
-      include: { client: { select: { id: true, namaKlien: true } } },
+      include: { client: { select: { id: true, namaKlien: true, invoiceAccessCode: true } } },
     });
 
     return NextResponse.json({ success: true, invoice });

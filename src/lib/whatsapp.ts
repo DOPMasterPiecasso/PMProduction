@@ -33,6 +33,7 @@ interface InvoiceData {
 
 interface ClientData {
   namaKlien: string;
+  invoiceAccessCode?: string | null;
 }
 
 interface GenerateOptions {
@@ -41,7 +42,75 @@ interface GenerateOptions {
   studioName?: string;
   previewLink?: string;
   messageType?: string;
+  /** Custom template string dari DB settings (opsional). Jika diisi, placeholder akan di-replace. */
+  customTemplate?: string;
 }
+
+/**
+ * Daftar placeholder yang tersedia untuk template WA:
+ * {{namaKlien}}, {{nomorInvoice}}, {{namaProject}}, {{nominal}},
+ * {{jatuhTempo}}, {{status}}, {{kodeAkses}}, {{linkInvoice}}, {{namaStudio}},
+ * {{terminKe}}, {{nominalTermin}}, {{jatuhTempoTermin}}
+ */
+export function renderTemplate(template: string, vars: Record<string, string>): string {
+  return template.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? `{{${key}}}`);
+}
+
+export const DEFAULT_TEMPLATE_INVOICE = `*INVOICE {{nomorInvoice}}*
+─────────────────
+*Project:* {{namaProject}}
+*Klien:* {{namaKlien}}
+*Total:* {{nominal}}
+*Jatuh Tempo:* {{jatuhTempo}}
+*Status:* {{status}}
+{{kodeAkses}}{{linkInvoice}}
+Terima kasih atas kerjasamanya. 🙏
+
+---
+{{namaStudio}}`;
+
+export const DEFAULT_TEMPLATE_PAYMENT = `*KONFIRMASI PEMBAYARAN*
+─────────────────
+Yth. {{namaKlien}},
+
+Pembayaran untuk invoice berikut telah kami terima:
+
+*Invoice:* {{nomorInvoice}}
+*Project:* {{namaProject}}
+*Total:* {{nominal}}
+{{kodeAkses}}{{linkInvoice}}
+Terima kasih atas kepercayaannya. 🙏
+
+---
+{{namaStudio}}`;
+
+export const DEFAULT_TEMPLATE_TERM = `*TERMIN {{terminKe}} — {{nomorInvoice}}*
+─────────────────
+Yth. {{namaKlien}},
+
+Pembayaran *Termin {{terminKe}}* untuk invoice *{{nomorInvoice}}*
+sebesar *{{nominalTermin}}* telah jatuh tempo pada *{{jatuhTempoTermin}}*.
+
+Mohon segera dilakukan pembayaran.
+
+{{kodeAkses}}{{linkInvoice}}
+Terima kasih atas kerjasamanya. 🙏
+
+---
+{{namaStudio}}`;
+
+export const DEFAULT_TEMPLATE_TERM_PAYMENT = `*KONFIRMASI PEMBAYARAN TERMIN {{terminKe}}*
+─────────────────
+Yth. {{namaKlien}},
+
+Pembayaran *Termin {{terminKe}}* untuk invoice *{{nomorInvoice}}*
+sebesar *{{nominalTermin}}* telah kami terima.
+
+Terima kasih atas pembayarannya. 🙏
+
+{{kodeAkses}}{{linkInvoice}}
+---
+{{namaStudio}}`;
 
 export function generateInvoiceMessage({
   invoice,
@@ -49,6 +118,7 @@ export function generateInvoiceMessage({
   studioName,
   previewLink,
   messageType = 'invoice',
+  customTemplate,
 }: GenerateOptions) {
   const due = new Date(invoice.jatuhTempo);
   const dueStr = due.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -61,34 +131,21 @@ export function generateInvoiceMessage({
     overdue: 'Jatuh Tempo',
   };
 
-  if (messageType === 'payment_confirm') {
-    let msg = '';
-    msg += `*KONFIRMASI PEMBAYARAN*\n`;
-    msg += `─────────────────\n`;
-    msg += `Yth. ${client.namaKlien},\n\n`;
-    msg += `Pembayaran untuk invoice berikut telah kami terima:\n\n`;
-    msg += `*Invoice:* ${invoice.nomorInvoice}\n`;
-    msg += `*Project:* ${invoice.namaProject || '-'}\n`;
-    msg += `*Total:* ${nominal}\n`;
-    if (previewLink) { msg += `\n*Link Invoice:* ${previewLink}\n`; }
-    msg += `\n`;
-    msg += `Terima kasih atas kepercayaannya. 🙏\n`;
-    if (studioName) msg += `\n---\n${studioName}`;
-    return msg;
-  }
+  const accessCode = client.invoiceAccessCode;
+  const vars: Record<string, string> = {
+    namaKlien: client.namaKlien,
+    nomorInvoice: invoice.nomorInvoice,
+    namaProject: invoice.namaProject || '-',
+    nominal,
+    jatuhTempo: dueStr,
+    status: statusLabel[invoice.status] || invoice.status,
+    kodeAkses: accessCode ? `*Kode Akses:* ${accessCode}\n` : '',
+    linkInvoice: previewLink ? `*Link Invoice:* ${previewLink}\n` : '',
+    namaStudio: studioName || 'CreativeOS',
+  };
 
-  let msg = '';
-  msg += `*INVOICE ${invoice.nomorInvoice}*\n`;
-  msg += `─────────────────\n`;
-  msg += `*Project:* ${invoice.namaProject || '-'}\n`;
-  msg += `*Klien:* ${client.namaKlien}\n`;
-  msg += `*Total:* ${nominal}\n`;
-  msg += `*Jatuh Tempo:* ${dueStr}\n`;
-  msg += `*Status:* ${statusLabel[invoice.status] || invoice.status}\n`;
-  if (previewLink) { msg += `\n*Link Invoice:* ${previewLink}\n`; }
-  msg += `\n`;
-  msg += `Terima kasih atas kerjasamanya. 🙏\n`;
-  if (studioName) msg += `\n---\n${studioName}`;
+  const template = customTemplate ||
+    (messageType === 'payment_confirm' ? DEFAULT_TEMPLATE_PAYMENT : DEFAULT_TEMPLATE_INVOICE);
 
-  return msg;
+  return renderTemplate(template, vars);
 }

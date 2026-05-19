@@ -8,7 +8,9 @@ export async function proxy(req: NextRequest) {
   const isLoginPage = pathname === "/login";
   const isAuthApi = pathname.startsWith("/api/auth");
   const isBranding = pathname === "/api/branding";
-  const isPublic = isLoginPage || isAuthApi || isBranding;
+  const isInvoicePage = pathname.startsWith("/invoice/");
+  const isInvoiceApi = /^\/api\/invoices\/[^/]+$/.test(pathname) && req.method !== "DELETE";
+  const isPublic = isLoginPage || isAuthApi || isBranding || isInvoicePage || isInvoiceApi;
 
   if (token && isLoginPage) {
     return NextResponse.redirect(new URL("/", req.url));

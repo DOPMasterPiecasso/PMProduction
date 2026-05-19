@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Loader2, Plus, Trash2 } from 'lucide-react';
+import { Loader2, Plus, Trash2, MessageSquare, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
+import { DEFAULT_TEMPLATE_INVOICE, DEFAULT_TEMPLATE_PAYMENT } from '@/lib/whatsapp';
 
 interface User { id: string; nama: string; email: string; role: string; isActive: boolean }
 interface Service { id: string; nama: string; deskripsi: string; colorHex: string; isActive: boolean }
@@ -28,6 +29,8 @@ export default function SettingsPage() {
 
   const [showAddService, setShowAddService] = useState(false);
   const [newSvc, setNewSvc] = useState({ nama: '', deskripsi: '', colorHex: '#2563EB' });
+
+  const [activeTemplateTab, setActiveTemplateTab] = useState<'invoice' | 'payment'>('invoice');
 
   const serviceColors = ['#2563EB', '#16A34A', '#7C3AED', '#D97706', '#94A3B8', '#DC2626', '#0891B2', '#D946EF'];
 
@@ -154,9 +157,15 @@ export default function SettingsPage() {
         fu_overdue_days: systemSettings.fu_overdue_days || '3',
         lead_inactive_days: systemSettings.lead_inactive_days || '7',
         target_revenue_tahunan: systemSettings.target_revenue_tahunan || '500000000',
+        wa_template_invoice: systemSettings.wa_template_invoice || DEFAULT_TEMPLATE_INVOICE,
+        wa_template_payment_confirm: systemSettings.wa_template_payment_confirm || DEFAULT_TEMPLATE_PAYMENT,
+        invoice_reminder_days: systemSettings.invoice_reminder_days || '[1,3,5,7]',
+        invoice_reminder_time: systemSettings.invoice_reminder_time || '08:00',
       });
     }
   }, [systemSettings]);
+
+  const REMINDER_KEYS = ['invoice_reminder_days', 'invoice_reminder_time'];
 
   async function handleSaveSettings() {
     try {
@@ -171,6 +180,20 @@ export default function SettingsPage() {
       toast.success('Pengaturan berhasil disimpan');
       fetchData();
     } catch { toast.error('Gagal menyimpan pengaturan'); }
+  }
+
+  async function handleSaveReminderSettings() {
+    try {
+      await Promise.all(REMINDER_KEYS.map((key) =>
+        fetch('/api/settings', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key, value: settingsForm[key] || '' }),
+        })
+      ));
+      toast.success('Pengaturan reminder disimpan');
+      fetchData();
+    } catch { toast.error('Gagal menyimpan pengaturan reminder'); }
   }
 
   if (loading) {
@@ -357,6 +380,209 @@ export default function SettingsPage() {
             <button onClick={handleSaveSettings} className="bg-[#18181B] text-white text-[12.5px] font-medium px-4 py-2 rounded-lg hover:opacity-85">
               Simpan Pengaturan
             </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Invoice Reminder Settings ─────────────────────────── */}
+      <div className="bg-white border border-black/[.07] rounded-xl shadow-sm">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-black/5">
+          <div>
+            <div className="text-[13px] font-semibold">Pengaturan Reminder Invoice</div>
+            <div className="text-[11px] text-gray-400 mt-0.5">Atur jadwal otomatis pengingat pembayaran via WhatsApp</div>
+          </div>
+          <button onClick={handleSaveReminderSettings} className="bg-[#18181B] text-white text-[11.5px] font-medium px-3 py-1.5 rounded-lg hover:opacity-85">
+            Simpan
+          </button>
+        </div>
+        <div className="p-4 flex flex-col gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* List Hari */}
+            <div>
+              <label className="text-[11.5px] font-medium text-gray-500 block mb-2">Daftar H-</label>
+              {(() => {
+                const current: number[] = JSON.parse(settingsForm.invoice_reminder_days || '[1,3,5,7]');
+                if (current.length === 0) return <p className="text-[12px] text-gray-400 italic">Belum ada hari, tambah di samping.</p>;
+                return (
+                  <div className="flex flex-col gap-1.5">
+                    {current.map((day) => (
+                      <div key={day} className="flex items-center justify-between px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                        <span className="text-[12.5px] font-medium text-blue-700">H-{day}</span>
+                        <button onClick={() => {
+                          const updated = current.filter((d) => d !== day);
+                          setSettingsForm({ ...settingsForm, invoice_reminder_days: JSON.stringify(updated) });
+                        }} className="text-[11px] text-blue-400 hover:text-red-500 transition-colors">Hapus</button>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+            {/* Tambah Hari + Jam */}
+            <div className="flex flex-col gap-3">
+              <div>
+                <label className="text-[11.5px] font-medium text-gray-500 block mb-2">Tambah H-</label>
+                <input type="number" min="1" placeholder="Contoh: 2"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const input = e.currentTarget;
+                      const val = parseInt(input.value);
+                      if (val > 0) {
+                        const current: number[] = JSON.parse(settingsForm.invoice_reminder_days || '[1,3,5,7]');
+                        if (!current.includes(val)) {
+                          const updated = [...current, val].sort((a, b) => a - b);
+                          setSettingsForm({ ...settingsForm, invoice_reminder_days: JSON.stringify(updated) });
+                        }
+                        input.value = '';
+                      }
+                    }
+                  }}
+                  className="w-full text-[13px] border border-black/10 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400"
+                />
+                <p className="text-[10px] text-gray-400 mt-1">Ketik angka lalu Enter</p>
+              </div>
+              <div>
+                <label className="text-[11.5px] font-medium text-gray-500 block mb-1">Jam pengiriman</label>
+                <input type="time" value={settingsForm.invoice_reminder_time || '08:00'}
+                  onChange={(e) => setSettingsForm({ ...settingsForm, invoice_reminder_time: e.target.value })}
+                  className="w-32 text-[13px] border border-black/10 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400"
+                />
+                <p className="text-[10px] text-gray-400 mt-1">Perubahan jam berlaku setelah restart server.</p>
+              </div>
+            </div>
+          </div>
+          <p className="text-[10px] text-gray-400">Reminder akan dikirim otomatis setiap hari. Kosongkan semua hari untuk mematikan fitur.</p>
+        </div>
+      </div>
+
+      {/* ── WA Template ───────────────────────────────────────── */}
+      <div className="bg-white border border-black/[.07] rounded-xl shadow-sm">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-black/5">
+          <div>
+            <div className="flex items-center gap-2">
+              <MessageSquare className="w-3.5 h-3.5 text-green-600" />
+              <div className="text-[13px] font-semibold">Template Pesan WhatsApp</div>
+            </div>
+            <div className="text-[11px] text-gray-400 mt-0.5 ml-5.5">Atur pesan default yang dikirim ke klien</div>
+          </div>
+          <button
+            onClick={handleSaveSettings}
+            className="bg-[#18181B] text-white text-[11.5px] font-medium px-3 py-1.5 rounded-lg hover:opacity-85"
+          >
+            Simpan
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex border-b border-black/5">
+          <button
+            onClick={() => setActiveTemplateTab('invoice')}
+            className={`flex-1 text-[12px] py-2.5 font-medium transition-colors ${activeTemplateTab === 'invoice' ? 'text-green-700 border-b-2 border-green-600' : 'text-gray-400 hover:text-gray-600'}`}
+          >
+            📄 Invoice Baru
+          </button>
+          <button
+            onClick={() => setActiveTemplateTab('payment')}
+            className={`flex-1 text-[12px] py-2.5 font-medium transition-colors ${activeTemplateTab === 'payment' ? 'text-green-700 border-b-2 border-green-600' : 'text-gray-400 hover:text-gray-600'}`}
+          >
+            ✅ Konfirmasi Bayar
+          </button>
+        </div>
+
+        <div className="p-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Editor */}
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <label className="text-[11.5px] font-medium text-gray-600">Template</label>
+              <button
+                onClick={() => {
+                  const key = activeTemplateTab === 'invoice' ? 'wa_template_invoice' : 'wa_template_payment_confirm';
+                  const def = activeTemplateTab === 'invoice' ? DEFAULT_TEMPLATE_INVOICE : DEFAULT_TEMPLATE_PAYMENT;
+                  setSettingsForm(prev => ({ ...prev, [key]: def }));
+                }}
+                className="flex items-center gap-1 text-[10.5px] text-gray-400 hover:text-gray-700 transition-colors"
+                title="Reset ke template default"
+              >
+                <RotateCcw className="w-3 h-3" /> Reset default
+              </button>
+            </div>
+            <textarea
+              value={activeTemplateTab === 'invoice'
+                ? (settingsForm.wa_template_invoice || DEFAULT_TEMPLATE_INVOICE)
+                : (settingsForm.wa_template_payment_confirm || DEFAULT_TEMPLATE_PAYMENT)}
+              onChange={(e) => {
+                const key = activeTemplateTab === 'invoice' ? 'wa_template_invoice' : 'wa_template_payment_confirm';
+                setSettingsForm(prev => ({ ...prev, [key]: e.target.value }));
+              }}
+              rows={12}
+              className="w-full text-[12px] font-mono border border-black/10 rounded-lg px-3 py-2.5 focus:outline-none focus:border-green-400 resize-y leading-relaxed"
+              placeholder="Ketik template pesan WA..."
+            />
+            {/* Placeholder guide */}
+            <div className="bg-gray-50 rounded-lg p-3">
+              <div className="text-[10.5px] font-semibold text-gray-500 mb-2">Placeholder yang tersedia:</div>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  ['{{namaKlien}}', 'Nama klien'],
+                  ['{{nomorInvoice}}', 'No. invoice'],
+                  ['{{namaProject}}', 'Nama project'],
+                  ['{{nominal}}', 'Total nominal'],
+                  ['{{jatuhTempo}}', 'Tanggal jatuh tempo'],
+                  ['{{status}}', 'Status invoice'],
+                  ['{{kodeAkses}}', 'Kode akses invoice'],
+                  ['{{linkInvoice}}', 'Link invoice'],
+                  ['{{namaStudio}}', 'Nama studio'],
+                ].map(([tag, desc]) => (
+                  <button
+                    key={tag}
+                    onClick={() => {
+                      const key = activeTemplateTab === 'invoice' ? 'wa_template_invoice' : 'wa_template_payment_confirm';
+                      setSettingsForm(prev => ({ ...prev, [key]: (prev[key] || '') + tag }));
+                    }}
+                    title={`Tambahkan ${desc}`}
+                    className="text-[10px] font-mono bg-white border border-black/10 rounded px-1.5 py-0.5 text-blue-700 hover:bg-blue-50 hover:border-blue-300 transition-colors"
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
+              <div className="text-[10px] text-gray-400 mt-1.5">Klik tag untuk menyisipkan ke template</div>
+            </div>
+          </div>
+
+          {/* Preview */}
+          <div className="flex flex-col gap-2">
+            <label className="text-[11.5px] font-medium text-gray-600">Preview (data contoh)</label>
+            <div className="border border-black/10 rounded-lg overflow-hidden flex-1">
+              <div className="bg-[#ECE5DD] px-3 py-2 flex items-center gap-2 border-b border-black/5">
+                <div className="w-6 h-6 rounded-full bg-green-600 flex items-center justify-center">
+                  <svg className="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" /><path d="M12 0C5.373 0 0 5.373 0 12c0 2.125.557 4.119 1.532 5.852L.073 23.927l6.22-1.432C7.879 23.443 9.897 24 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.933 0-3.744-.518-5.301-1.426l-.378-.224-3.921.903.936-3.818-.247-.393A9.922 9.922 0 0 1 2 12c0-5.514 4.486-10 10-10s10 4.486 10 10-4.486 10-10 10z" /></svg>
+                </div>
+                <span className="text-[11.5px] font-medium text-gray-700">WhatsApp Preview</span>
+              </div>
+              <div className="bg-[#E5DDD5] p-3 min-h-[200px]">
+                <div className="bg-white rounded-lg rounded-tl-none shadow-sm px-3 py-2.5 max-w-[85%] text-[11.5px] leading-relaxed whitespace-pre-wrap text-gray-800">
+                  {(() => {
+                    const tpl = activeTemplateTab === 'invoice'
+                      ? (settingsForm.wa_template_invoice || DEFAULT_TEMPLATE_INVOICE)
+                      : (settingsForm.wa_template_payment_confirm || DEFAULT_TEMPLATE_PAYMENT);
+                    const sampleVars: Record<string, string> = {
+                      namaKlien: 'Budi Santoso',
+                      nomorInvoice: 'INV-2026-001',
+                      namaProject: 'Buku Tahunan SMAN 1',
+                      nominal: 'Rp 15.000.000',
+                      jatuhTempo: '30 Mei 2026',
+                      status: 'Belum Dibayar',
+                      kodeAkses: '*Kode Akses:* ABC123\n',
+                      linkInvoice: '*Link Invoice:* http://localhost:3000/invoice/xxx\n',
+                      namaStudio: settingsForm.studio_name || 'Parama Production',
+                    };
+                    return tpl.replace(/\{\{(\w+)\}\}/g, (_, k) => sampleVars[k] ?? `{{${k}}}`);
+                  })()}
+                </div>
+                <div className="text-[9.5px] text-gray-400 text-right mt-1 mr-2">12:00 ✓✓</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

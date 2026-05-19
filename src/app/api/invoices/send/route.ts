@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { sendWA, generateInvoiceMessage } from '@/lib/whatsapp';
+import { sendWA, generateInvoiceMessage, DEFAULT_TEMPLATE_INVOICE, DEFAULT_TEMPLATE_PAYMENT } from '@/lib/whatsapp';
 
 const PREVIEW_URL = (process.env.NEXTAUTH_URL || 'http://localhost:3000').replace(/\/+$/, '');
 
@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     const invoice = await prisma.invoice.findUnique({
       where: { id: invoiceId },
       include: {
-        client: { select: { id: true, namaKlien: true, noHp: true } },
+        client: { select: { id: true, namaKlien: true, noHp: true, invoiceAccessCode: true } },
       },
     });
 
@@ -28,6 +28,12 @@ export async function POST(req: Request) {
     const studioName = studioSetting?.value || 'CreativeOS';
     const previewLink = `${PREVIEW_URL}/invoice/${invoice.id}`;
 
+    // Ambil custom template dari settings (fallback ke default jika belum diset)
+    const templateKey = messageType === 'payment_confirm' ? 'wa_template_payment_confirm' : 'wa_template_invoice';
+    const templateSetting = await prisma.systemSetting.findUnique({ where: { key: templateKey } });
+    const defaultTemplate = messageType === 'payment_confirm' ? DEFAULT_TEMPLATE_PAYMENT : DEFAULT_TEMPLATE_INVOICE;
+    const customTemplate = templateSetting?.value || defaultTemplate;
+
     let logMsgType = messageType === 'payment_confirm' ? 'payment' : 'invoice';
     const generatedMessage = generateInvoiceMessage({
       invoice,
@@ -35,6 +41,7 @@ export async function POST(req: Request) {
       studioName,
       previewLink,
       messageType,
+      customTemplate,
     });
 
     const message = customMessage || generatedMessage;

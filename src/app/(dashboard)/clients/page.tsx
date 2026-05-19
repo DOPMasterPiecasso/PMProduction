@@ -14,6 +14,7 @@ interface Client {
   status: string;
   nextFuDate: string | null;
   catatan: string | null;
+  invoiceAccessCode: string | null;
   clientType: { id: string; nama: string } | null;
   kota: { id: string; nama: string } | null;
   source: { id: string; nama: string } | null;
@@ -51,7 +52,7 @@ function svcBg(hex: string) {
 
 // ─── Empty Form ────────────────────────────────────────────────
 function emptyForm() {
-  return { namaKlien: '', clientTypeId: '', kotaId: '', namaContact: '', noHp: '', email: '', sourceId: '', serviceId: '', tags: '', status: 'unqualified', nextFuDate: '', catatan: '' };
+  return { namaKlien: '', clientTypeId: '', kotaId: '', namaContact: '', noHp: '', email: '', sourceId: '', serviceId: '', tags: '', status: 'unqualified', nextFuDate: '', catatan: '', invoiceAccessCode: '' };
 }
 
 // ─── Client Form Modal ────────────────────────────────────────
@@ -81,6 +82,7 @@ function ClientModal({
         status: editing.status,
         nextFuDate: editing.nextFuDate ? editing.nextFuDate.slice(0, 10) : '',
         catatan: editing.catatan ?? '',
+        invoiceAccessCode: editing.invoiceAccessCode ?? '',
       };
     }
     return emptyForm();
@@ -215,6 +217,18 @@ function ClientModal({
           <div>
             <label className="text-[11.5px] font-medium text-gray-600 block mb-1">Catatan</label>
             <textarea rows={2} placeholder="Catatan tambahan..." value={form.catatan} onChange={(e) => set('catatan', e.target.value)} className={`${inp} resize-none`} />
+          </div>
+
+          {/* Invoice Access Code */}
+          <div>
+            <label className="text-[11.5px] font-medium text-gray-600 block mb-1">Kode Akses Invoice</label>
+            <div className="flex gap-2">
+              <input placeholder="Kosongkan jika tidak perlu proteksi" value={form.invoiceAccessCode} onChange={(e) => set('invoiceAccessCode', e.target.value)} className={`${inp} flex-1`} />
+              <button type="button" onClick={() => { const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let code = ''; for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)]; set('invoiceAccessCode', code); }}
+                className="px-3 py-2 text-[11px] font-medium rounded-lg border border-black/[0.1] text-gray-600 hover:bg-gray-100 transition-colors shrink-0"
+              >Generate</button>
+            </div>
+            <p className="text-[10px] text-gray-400 mt-1">Client harus memasukkan kode ini untuk melihat invoice. Biarkan kosong jika tidak ingin proteksi.</p>
           </div>
         </div>
 

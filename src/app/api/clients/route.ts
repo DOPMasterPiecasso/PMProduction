@@ -21,7 +21,23 @@ export async function GET(req: Request) {
           serviceId ? { serviceId } : {},
         ],
       },
-      include: {
+      select: {
+        id: true,
+        namaKlien: true,
+        clientTypeId: true,
+        kotaId: true,
+        namaContact: true,
+        noHp: true,
+        email: true,
+        sourceId: true,
+        serviceId: true,
+        tags: true,
+        status: true,
+        nextFuDate: true,
+        catatan: true,
+        createdById: true,
+        createdAt: true,
+        updatedAt: true,
         clientType: { select: { id: true, nama: true } },
         kota: { select: { id: true, nama: true } },
         source: { select: { id: true, nama: true } },
@@ -48,7 +64,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { namaKlien, clientTypeId, kotaId, namaContact, noHp, email, sourceId, serviceId, tags, status, nextFuDate, catatan } = body;
+    const { namaKlien, clientTypeId, kotaId, namaContact, noHp, email, sourceId, serviceId, tags, status, nextFuDate, catatan, invoiceAccessCode } = body;
 
     if (!namaKlien?.trim()) return NextResponse.json({ error: 'Nama klien wajib diisi' }, { status: 400 });
 
@@ -67,12 +83,38 @@ export async function POST(req: Request) {
         nextFuDate: nextFuDate ? new Date(nextFuDate) : null,
         catatan: catatan || null,
       },
-      include: {
+      select: {
+        id: true,
+        namaKlien: true,
+        clientTypeId: true,
+        kotaId: true,
+        namaContact: true,
+        noHp: true,
+        email: true,
+        sourceId: true,
+        serviceId: true,
+        tags: true,
+        status: true,
+        nextFuDate: true,
+        catatan: true,
+        createdById: true,
+        createdAt: true,
+        updatedAt: true,
         clientType: { select: { id: true, nama: true } },
         kota: { select: { id: true, nama: true } },
         service: { select: { id: true, nama: true, colorHex: true } },
       },
     });
+
+    // invoiceAccessCode di-update via raw query karena adapter MariaDB
+    // memerlukan koneksi fresh untuk mengenali kolom baru
+    if (invoiceAccessCode) {
+      await prisma.$executeRawUnsafe(
+        'UPDATE clients SET invoiceAccessCode = ? WHERE id = ?',
+        invoiceAccessCode,
+        client.id,
+      );
+    }
 
     return NextResponse.json({ client }, { status: 201 });
   } catch (error: unknown) {
