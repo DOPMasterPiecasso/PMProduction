@@ -43,10 +43,9 @@ export async function POST(req: Request) {
     const studioName = settingsMap.studio_name || 'CreativeOS';
 
     const now = new Date();
-    // BUG FIX: Gunakan tanggal hari ini dalam WIB (UTC+7), bukan UTC
-    // Ini penting agar perbandingan H-X tidak meleset 1 hari karena offset
-    const wibNow = new Date(now.getTime() + 7 * 60 * 60 * 1000);
-    const todayStart = new Date(wibNow.getFullYear(), wibNow.getMonth(), wibNow.getDate());
+    // Gunakan string tanggal WIB sebagai referensi "hari ini"
+    // Ini lebih aman daripada new Date(y,m,d) yang pakai local timezone server
+    const todayWIB = toWIBDay(now); // format "YYYY-MM-DD" dalam WIB
 
     const activeReminders = await prisma.invoiceReminder.findMany({
       where: { isActive: true },
@@ -80,7 +79,8 @@ export async function POST(req: Request) {
         continue;
       }
 
-      if (lastSentAt && isSameDay(lastSentAt, todayStart)) {
+      // Cek apakah sudah dikirim hari ini (WIB)
+      if (lastSentAt && toWIBDay(lastSentAt) === todayWIB) {
         skipped++;
         continue;
       }
@@ -97,7 +97,10 @@ export async function POST(req: Request) {
       let matchedDueDate: Date | null = null;
       let matchedTerm: typeof invoice.terms[0] | null = null;
 
-      if (isSameDay(invoiceReminderDate, todayStart)) {
+      const reminderDateWIB = toWIBDay(invoiceReminderDate);
+      console.log(`[REMINDER] Invoice ${invoice.nomorInvoice}: H-${daysBefore}, reminderDate=${reminderDateWIB}, today=${todayWIB}, match=${reminderDateWIB === todayWIB}`);
+
+      if (reminderDateWIB === todayWIB) {
         matchedDueDate = invoice.jatuhTempo;
       }
 
@@ -106,7 +109,8 @@ export async function POST(req: Request) {
         for (const term of invoice.terms) {
           if (term.status === 'paid') continue;
           const termReminderDate = calcReminderDate(term.jatuhTempo, daysBefore);
-          if (isSameDay(termReminderDate, todayStart)) {
+          const termReminderDateWIB = toWIBDay(termReminderDate);
+          if (termReminderDateWIB === todayWIB) {
             matchedDueDate = term.jatuhTempo;
             matchedTerm = term;
             break;
