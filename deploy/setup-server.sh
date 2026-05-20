@@ -101,6 +101,18 @@ server {
     listen 80;
     server_name $DOMAIN;
 
+    # ----------------------------------------------------------------
+    # Serve uploaded files LANGSUNG dari filesystem (tanpa lewat Node)
+    # File baru yang diupload langsung bisa diakses tanpa npm run build
+    # ----------------------------------------------------------------
+    location /uploads/ {
+        alias $APP_DIR/PMProduction/creativeos/public/uploads/;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        add_header X-Content-Type-Options nosniff;
+        try_files \$uri =404;
+    }
+
     location / {
         proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;

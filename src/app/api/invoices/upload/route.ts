@@ -33,7 +33,7 @@ export async function POST(req: Request) {
     const buffer = Buffer.from(await file.arrayBuffer());
     await writeFile(filePath, buffer);
 
-    const fileUrl = `/uploads/invoices/${fileName}`;
+    const fileUrl = `/api/uploads/invoices/${fileName}`;
 
     let doc;
     if (termId) {

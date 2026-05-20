@@ -37,7 +37,7 @@ export async function POST(req: Request) {
     // Write file to filesystem
     await writeFile(filepath, buffer);
 
-    const fileUrl = `/uploads/deals/${filename}`;
+    const fileUrl = `/api/uploads/deals/${filename}`;
     const fileType = file.name.split('.').pop()?.toUpperCase() || 'UNKNOWN';
 
     // Create record in database
