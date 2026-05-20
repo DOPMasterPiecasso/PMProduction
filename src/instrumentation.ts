@@ -17,17 +17,25 @@ async function scheduleReminder() {
   }
 
   const expression = `${minute} ${hour} * * *`;
+
+  // BUG FIX: Gunakan PORT yang benar (3125) bukan default 3000
+  // BUG FIX: Tambah timezone WIB agar cron tidak berjalan di UTC
   cron.schedule(expression, async () => {
     try {
-      const origin = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-      await fetch(`${origin}/api/invoices/reminders/process`, { method: 'POST' });
+      const port = process.env.PORT || '3125';
+      const origin = process.env.NEXTAUTH_URL || `http://localhost:${port}`;
+      const res = await fetch(`${origin}/api/invoices/reminders/process`, { method: 'POST' });
+      const data = await res.json().catch(() => ({}));
+      console.log(`[CRON] Reminder selesai: sent=${data.sent ?? 0}, skipped=${data.skipped ?? 0}`, data.errors || '');
     } catch (err) {
       console.error('[CRON] Gagal memproses reminder:', err);
     }
+  }, {
+    timezone: 'Asia/Jakarta', // WIB — supaya jam 8 = jam 8 Indonesia, bukan UTC
   });
 
   const timeStr = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
-  console.log(`[CRON] Invoice reminder scheduler registered (daily at ${timeStr})`);
+  console.log(`[CRON] Invoice reminder scheduler registered (daily at ${timeStr} WIB)`);
 }
 
 export async function register() {

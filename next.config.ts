@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // instrumentation.ts (cron scheduler) dijalankan otomatis pada Next.js 15+
 };
 
 export default nextConfig;

@@ -4,10 +4,14 @@ import { sendWA, generateInvoiceMessage, DEFAULT_TEMPLATE_INVOICE, DEFAULT_TEMPL
 
 const PREVIEW_URL = (process.env.NEXTAUTH_URL || 'http://localhost:3000').replace(/\/+$/, '');
 
+function toWIBDay(date: Date): string {
+  // Konversi ke WIB (UTC+7) dan format YYYY-MM-DD
+  const wib = new Date(date.getTime() + 7 * 60 * 60 * 1000);
+  return wib.toISOString().slice(0, 10); // "YYYY-MM-DD"
+}
+
 function isSameDay(a: Date, b: Date) {
-  return a.getFullYear() === b.getFullYear()
-    && a.getMonth() === b.getMonth()
-    && a.getDate() === b.getDate();
+  return toWIBDay(a) === toWIBDay(b);
 }
 
 function calcReminderDate(dueDate: Date, daysBefore: number): Date {
@@ -30,7 +34,10 @@ export async function POST() {
     const studioName = settingsMap.studio_name || 'CreativeOS';
 
     const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    // BUG FIX: Gunakan tanggal hari ini dalam WIB (UTC+7), bukan UTC
+    // Ini penting agar perbandingan H-X tidak meleset 1 hari karena offset
+    const wibNow = new Date(now.getTime() + 7 * 60 * 60 * 1000);
+    const todayStart = new Date(wibNow.getFullYear(), wibNow.getMonth(), wibNow.getDate());
 
     const activeReminders = await prisma.invoiceReminder.findMany({
       where: { isActive: true },
