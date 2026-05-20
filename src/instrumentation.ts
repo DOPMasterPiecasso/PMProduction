@@ -24,7 +24,10 @@ async function scheduleReminder() {
     try {
       const port = process.env.PORT || '3125';
       const origin = process.env.NEXTAUTH_URL || `http://localhost:${port}`;
-      const res = await fetch(`${origin}/api/invoices/reminders/process`, { method: 'POST' });
+      const cronSecret = process.env.CRON_SECRET;
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (cronSecret) headers['Authorization'] = `Bearer ${cronSecret}`;
+      const res = await fetch(`${origin}/api/invoices/reminders/process`, { method: 'POST', headers });
       const data = await res.json().catch(() => ({}));
       console.log(`[CRON] Reminder selesai: sent=${data.sent ?? 0}, skipped=${data.skipped ?? 0}`, data.errors || '');
     } catch (err) {

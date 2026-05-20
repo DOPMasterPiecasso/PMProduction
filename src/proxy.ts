@@ -10,7 +10,9 @@ export async function proxy(req: NextRequest) {
   const isBranding = pathname === "/api/branding";
   const isInvoicePage = pathname.startsWith("/invoice/");
   const isInvoiceApi = /^\/api\/invoices\/[^/]+$/.test(pathname) && req.method !== "DELETE";
-  const isPublic = isLoginPage || isAuthApi || isBranding || isInvoicePage || isInvoiceApi;
+  // Route internal untuk cron scheduler — tidak perlu session
+  const isReminderProcess = pathname === "/api/invoices/reminders/process";
+  const isPublic = isLoginPage || isAuthApi || isBranding || isInvoicePage || isInvoiceApi || isReminderProcess;
 
   if (token && isLoginPage) {
     return NextResponse.redirect(new URL("/", req.url));

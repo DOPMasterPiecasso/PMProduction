@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sendWA, generateInvoiceMessage, DEFAULT_TEMPLATE_INVOICE, DEFAULT_TEMPLATE_TERM, renderTemplate } from '@/lib/whatsapp';
 
-const PREVIEW_URL = (process.env.NEXTAUTH_URL || 'http://localhost:3000').replace(/\/+$/, '');
+const PREVIEW_URL = (process.env.NEXTAUTH_URL || `http://localhost:${process.env.PORT || '3125'}`).replace(/\/+$/, '');
 
 function toWIBDay(date: Date): string {
   // Konversi ke WIB (UTC+7) dan format YYYY-MM-DD
@@ -20,7 +20,16 @@ function calcReminderDate(dueDate: Date, daysBefore: number): Date {
   return d;
 }
 
-export async function POST() {
+export async function POST(req: Request) {
+  // Validasi CRON_SECRET supaya tidak bisa dipanggil sembarangan dari luar
+  const cronSecret = process.env.CRON_SECRET;
+  if (cronSecret) {
+    const authHeader = req.headers.get('authorization');
+    if (authHeader !== `Bearer ${cronSecret}`) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+  }
+
   try {
     const settings = await prisma.systemSetting.findMany();
     const settingsMap: Record<string, string> = {};
