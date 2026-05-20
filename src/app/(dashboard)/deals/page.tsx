@@ -492,7 +492,7 @@ export default function DealsPage() {
   }
 
   return (
-    <div className="p-[20px_24px] flex flex-col gap-[16px]">
+    <div className="p-[12px_16px] md:p-[20px_24px] flex flex-col gap-[12px] md:gap-[16px]">
       {showUploadModal && (
         <UploadModal
           deals={deals}
@@ -509,14 +509,14 @@ export default function DealsPage() {
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-[20px] font-semibold tracking-[-0.3px]">Deal Clients</h1>
-          <p className="text-[13px] text-gray-400 mt-0.5">Deal (Won) — evaluasi per bulan</p>
+          <h1 className="text-[18px] md:text-[20px] font-semibold tracking-[-0.3px]">Deal Clients</h1>
+          <p className="text-[12px] md:text-[13px] text-gray-400 mt-0.5">Deal (Won) — evaluasi per bulan</p>
         </div>
         <button
           onClick={() => setShowUploadModal(true)}
-          className="bg-[#18181B] text-white flex items-center px-3 py-2 rounded-lg text-[12.5px] font-medium hover:opacity-85"
+          className="bg-[#18181B] text-white flex items-center px-3 py-2 rounded-lg text-[12.5px] font-medium hover:opacity-85 w-full sm:w-auto justify-center"
         >
           <Upload className="w-3.5 h-3.5 mr-1.5" />
           Upload Dokumen
@@ -538,7 +538,7 @@ export default function DealsPage() {
           </div>
         </div>
         <div className="p-4">
-          <div className="grid grid-cols-6 gap-3 mb-4">
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-4">
             {dealMonths.length === 0 ? (
               <div className="col-span-6 text-center text-gray-400 text-[12px] py-4">Belum ada data deal</div>
             ) : (

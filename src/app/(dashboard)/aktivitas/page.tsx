@@ -448,16 +448,16 @@ export default function AktivitasPage() {
   }
 
   return (
-    <div className="p-[20px_24px] flex flex-col gap-[16px]">
+    <div className="p-[12px_16px] md:p-[20px_24px] flex flex-col gap-[12px] md:gap-[16px]">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-[20px] font-semibold tracking-[-0.3px] text-[#18181B]">Aktivitas & Log</h1>
-          <p className="text-[13px] text-[#A0A0A8]">Log semua interaksi + reminder follow-up</p>
+          <h1 className="text-[18px] md:text-[20px] font-semibold tracking-[-0.3px] text-[#18181B]">Aktivitas & Log</h1>
+          <p className="text-[12px] md:text-[13px] text-[#A0A0A8]">Log semua interaksi + reminder follow-up</p>
         </div>
         <button
           onClick={openCreate}
-          className="bg-[#18181B] text-white flex items-center px-[12px] py-[8px] rounded-[8px] text-[12.5px] font-medium hover:opacity-85 transition-opacity"
+          className="bg-[#18181B] text-white flex items-center px-[12px] py-[8px] rounded-[8px] text-[12.5px] font-medium hover:opacity-85 transition-opacity w-full sm:w-auto justify-center sm:justify-start"
         >
           <Plus className="w-[14px] h-[14px] mr-[8px]" />
           Catat Aktivitas
@@ -486,9 +486,9 @@ export default function AktivitasPage() {
             <button onClick={() => handleCalMove(-1)} className="btn-prev text-gray-500 hover:text-gray-900 text-lg leading-none px-1">&#8249;</button>
             <button onClick={handleCalToday} className="text-[11px] px-2 py-1 rounded-md border border-black/10 hover:bg-gray-100">Hari ini</button>
             <button onClick={() => handleCalMove(1)} className="btn-next text-gray-500 hover:text-gray-900 text-lg leading-none px-1">&#8250;</button>
-            <span className="text-[14px] font-semibold ml-1">{MONTHS[calDate.getMonth()]} {calDate.getFullYear()}</span>
+            <span className="text-[13px] md:text-[14px] font-semibold ml-1">{MONTHS[calDate.getMonth()]} {calDate.getFullYear()}</span>
           </div>
-          <div className="flex gap-3 text-[11px] text-gray-500">
+          <div className="hidden sm:flex gap-3 text-[11px] text-gray-500">
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500"></span>Overdue</span>
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500"></span>Follow-up</span>
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500"></span>Selesai</span>
@@ -504,7 +504,7 @@ export default function AktivitasPage() {
         <div className="grid grid-cols-7">
           {calDays.map((cd, idx) => {
             if (cd.other) {
-              return <div key={idx} className="min-h-[60px] border border-black/5 p-1.5 opacity-30"><div className="text-[11px] text-gray-400">{cd.day}</div></div>;
+              return <div key={idx} className="min-h-[40px] md:min-h-[60px] border border-black/5 p-1 opacity-30"><div className="text-[11px] text-gray-400">{cd.day}</div></div>;
             }
             const evts = calEvents[cd.key] || [];
             const isToday = cd.key === todayKey;
@@ -619,7 +619,7 @@ export default function AktivitasPage() {
       {/* Full Activity Log Table */}
       <div className="bg-white border border-black/[.07] rounded-[12px] shadow-[0_1px_3px_rgba(0,0,0,.06),0_1px_2px_rgba(0,0,0,.04)]">
         <div className="p-3 border-b border-black/5 flex items-center gap-3">
-          <div className="relative flex-1 max-w-[300px]">
+          <div className="relative flex-1">
             <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
             <Input
               placeholder="Cari client/catatan..."

@@ -899,7 +899,7 @@ function InvoicesPage() {
   const thisMonthLabel = monthNames[now.getMonth()];
 
   return (
-    <div className="p-[20px_24px] flex flex-col gap-[16px]">
+    <div className="p-[12px_16px] md:p-[20px_24px] flex flex-col gap-[12px] md:gap-[16px]">
       {showCreate && <CreateInvoiceModal onClose={() => setShowCreate(false)} onCreated={fetchInvoices} />}
       {filesInvoice && <InvoiceFilesModal invoice={filesInvoice} onClose={() => { setFilesInvoice(null); fetchInvoices(); }} />}
       {terminInvoice && <TerminModal invoice={terminInvoice} onClose={() => setTerminInvoice(null)} onUpdated={fetchInvoices} onSendTerm={(term) => { setSendTermInvoice(terminInvoice); setSendTerm(term); }} />}
@@ -907,13 +907,13 @@ function InvoicesPage() {
       {sendTermInvoice && sendTerm && <SendTermModal invoice={sendTermInvoice} term={sendTerm} onClose={() => { setSendTermInvoice(null); setSendTerm(null); }} onSent={fetchInvoices} />}
       {reminderInvoice && <ReminderModal invoice={reminderInvoice} onClose={() => setReminderInvoice(null)} />}
 
-      <div className="flex items-start justify-between flex-wrap gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-[20px] font-semibold tracking-[-0.3px]">Invoices</h1>
-          <p className="text-[13px] text-gray-400 mt-0.5">Group by client — klik client untuk lihat detail</p>
+          <h1 className="text-[18px] md:text-[20px] font-semibold tracking-[-0.3px]">Invoices</h1>
+          <p className="text-[12px] md:text-[13px] text-gray-400 mt-0.5">Group by client — klik client untuk lihat detail</p>
         </div>
         <button onClick={() => setShowCreate(true)}
-          className="bg-[#18181B] text-white flex items-center px-3 py-2 rounded-lg text-[12.5px] font-medium hover:opacity-85"
+          className="bg-[#18181B] text-white flex items-center px-3 py-2 rounded-lg text-[12.5px] font-medium hover:opacity-85 w-full sm:w-auto justify-center"
         ><Plus className="w-3.5 h-3.5 mr-1.5" /> Buat Invoice</button>
       </div>
 
@@ -940,7 +940,7 @@ function InvoicesPage() {
         </div>
       </div>
 
-      <div className="flex items-center gap-2 bg-white border border-black/10 rounded-lg px-3 py-2 max-w-xs">
+      <div className="flex items-center gap-2 bg-white border border-black/10 rounded-lg px-3 py-2 w-full sm:max-w-xs">
         <Search className="w-3.5 h-3.5 text-gray-400" />
         <input placeholder="Cari klien / invoice..." value={search} onChange={(e) => setSearch(e.target.value)}
           className="text-[12px] bg-transparent outline-none flex-1 placeholder:text-gray-300" />

@@ -410,9 +410,9 @@ export default function ClientsPage() {
         />
       )}
 
-      <div className="p-6 flex flex-col gap-5">
+      <div className="p-[12px_16px] md:p-6 flex flex-col gap-4 md:gap-5">
         {/* Header */}
-        <div className="flex items-start justify-between flex-wrap gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between flex-wrap gap-3">
           <div>
             <h1 className="text-[17px] font-semibold tracking-tight text-[#18181B]">Database Klien</h1>
             <p className="text-[11.5px] text-gray-400 mt-0.5">Masukkan semua kontak — kurasi status qualified/unqualified</p>
@@ -435,7 +435,7 @@ export default function ClientsPage() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-5 gap-2">
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
           {[
             { label: 'Total Database', val: stats.total, color: '#18181B' },
             { label: 'Qualified',      val: stats.qualified,   color: '#16A34A' },

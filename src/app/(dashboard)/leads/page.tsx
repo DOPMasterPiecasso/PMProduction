@@ -337,11 +337,11 @@ export default function LeadsPage() {
   };
 
   return (
-    <div className="p-[20px_24px] flex flex-col gap-[16px]">
-      <div className="flex items-center justify-between">
+    <div className="p-[12px_16px] md:p-[20px_24px] flex flex-col gap-[12px] md:gap-[16px]">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-[20px] font-semibold tracking-[-0.3px] text-[#18181B]">Inbox Leads</h1>
-          <p className="text-[13px] text-[#A0A0A8]">Kelola dan kurasi semua prospek yang masuk sebelum dipindahkan ke Pipeline.</p>
+          <h1 className="text-[18px] md:text-[20px] font-semibold tracking-[-0.3px] text-[#18181B]">Inbox Leads</h1>
+          <p className="text-[12px] md:text-[13px] text-[#A0A0A8]">Kelola dan kurasi semua prospek yang masuk sebelum dipindahkan ke Pipeline.</p>
         </div>
         <div className="flex gap-[8px]">
           <button
@@ -354,7 +354,7 @@ export default function LeadsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 md:gap-4">
         <div className="bg-white border border-black/[.07] rounded-[12px] shadow-[0_1px_3px_rgba(0,0,0,.06),0_1px_2px_rgba(0,0,0,.04)] p-3 flex items-center justify-between">
           <div>
             <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Total Leads</div>
@@ -382,11 +382,11 @@ export default function LeadsPage() {
       </div>
 
       <div className="bg-white border border-black/[.07] rounded-[12px] shadow-[0_1px_3px_rgba(0,0,0,.06),0_1px_2px_rgba(0,0,0,.04)] flex flex-col h-full">
-        <div className="p-4 border-b border-black/5 flex items-center justify-between gap-4">
-          <div className="relative w-[300px]">
+        <div className="p-4 border-b border-black/5 flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="relative w-full sm:w-[300px]">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <Input
-              placeholder="Cari nama klien, kontak, atau perusahaan..."
+              placeholder="Cari nama klien, kontak..."
               className="pl-9 text-[12.5px] bg-gray-50/50"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -403,14 +403,15 @@ export default function LeadsPage() {
             <p className="text-[14px]">Belum ada leads</p>
           </div>
         ) : (
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader className="bg-[#EFEEEA]/50">
               <TableRow>
                 <TableHead className="text-[10px] font-semibold uppercase tracking-wider">Lead / Kontak</TableHead>
-                <TableHead className="text-[10px] font-semibold uppercase tracking-wider">Sumber</TableHead>
-                <TableHead className="text-[10px] font-semibold uppercase tracking-wider">Layanan</TableHead>
+                <TableHead className="text-[10px] font-semibold uppercase tracking-wider hidden sm:table-cell">Sumber</TableHead>
+                <TableHead className="text-[10px] font-semibold uppercase tracking-wider hidden sm:table-cell">Layanan</TableHead>
                 <TableHead className="text-[10px] font-semibold uppercase tracking-wider">Status</TableHead>
-                <TableHead className="text-[10px] font-semibold uppercase tracking-wider">Tanggal Masuk</TableHead>
+                <TableHead className="text-[10px] font-semibold uppercase tracking-wider hidden md:table-cell">Tanggal Masuk</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -421,8 +422,8 @@ export default function LeadsPage() {
                     <div className="font-medium text-[13px]">{lead.namaInstitusi}</div>
                     <div className="text-[11.5px] text-gray-500 mt-0.5">{lead.namaContact || '-'}</div>
                   </TableCell>
-                  <TableCell className="text-[12.5px] text-gray-600">{lead.source?.nama || '-'}</TableCell>
-                  <TableCell className="text-[12.5px] text-gray-600">{lead.service?.nama || '-'}</TableCell>
+                  <TableCell className="text-[12.5px] text-gray-600 hidden sm:table-cell">{lead.source?.nama || '-'}</TableCell>
+                  <TableCell className="text-[12.5px] text-gray-600 hidden sm:table-cell">{lead.service?.nama || '-'}</TableCell>
                   <TableCell>
                     <Badge
                       variant="outline"
@@ -431,7 +432,7 @@ export default function LeadsPage() {
                       {statusLabels[lead.status] || lead.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-[12.5px] text-gray-600">{formatDate(lead.tanggalMasuk)}</TableCell>
+                  <TableCell className="text-[12.5px] text-gray-600 hidden md:table-cell">{formatDate(lead.tanggalMasuk)}</TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger
@@ -458,6 +459,7 @@ export default function LeadsPage() {
               ))}
             </TableBody>
           </Table>
+          </div>
         )}
       </div>
 

@@ -803,16 +803,16 @@ export default function PipelinePage() {
         />
       )}
 
-      <div className="p-6 flex flex-col gap-5">
+      <div className="p-[12px_16px] md:p-6 flex flex-col gap-4 md:gap-5">
         {/* Header */}
-        <div className="flex items-start justify-between flex-wrap gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between flex-wrap gap-3">
           <div>
             <h1 className="text-[17px] font-semibold tracking-tight text-[#18181B]">Pipeline</h1>
             <p className="text-[11.5px] text-gray-400 mt-0.5">Qualified leads — drag card untuk pindah stage · klik untuk detail</p>
           </div>
           <button
             onClick={() => setShowAddDeal(true)}
-            className="inline-flex items-center gap-1.5 bg-[#18181B] text-white text-[12px] font-medium px-3.5 py-2 rounded-lg hover:bg-[#27272A] transition-colors"
+            className="inline-flex items-center gap-1.5 bg-[#18181B] text-white text-[12px] font-medium px-3.5 py-2 rounded-lg hover:bg-[#27272A] transition-colors w-full sm:w-auto justify-center sm:justify-start"
           >
             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}><path d="M12 5v14M5 12h14"/></svg>
             Add Deal
@@ -820,7 +820,7 @@ export default function PipelinePage() {
         </div>
 
         {/* Summary cards */}
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {stages.map((stage) => {
             const st = totalPerStage[stage.id] || { totalNilai: 0, dealCount: 0 };
             return (

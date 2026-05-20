@@ -84,20 +84,20 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="p-[20px_24px] flex flex-col gap-[16px]">
+    <div className="p-[12px_16px] md:p-[20px_24px] flex flex-col gap-[12px] md:gap-[16px]">
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-[20px] font-semibold tracking-[-0.3px]">Dashboard</h1>
-          <p className="text-[13px] text-gray-400 mt-0.5">{new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
+          <h1 className="text-[18px] md:text-[20px] font-semibold tracking-[-0.3px]">Dashboard</h1>
+          <p className="text-[12px] md:text-[13px] text-gray-400 mt-0.5">{new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
         </div>
-        <button onClick={() => router.push('/aktivitas')} className="bg-[#18181B] text-white flex items-center px-3 py-2 rounded-lg text-[12.5px] font-medium hover:opacity-85">
+        <button onClick={() => router.push('/aktivitas')} className="bg-[#18181B] text-white flex items-center px-3 py-2 rounded-lg text-[12px] font-medium hover:opacity-85">
           + Catat Aktivitas
         </button>
       </div>
 
       {/* Date strip */}
-      <div className="bg-white border border-black/[.07] rounded-xl shadow-sm px-4 py-3 flex items-center justify-between flex-wrap gap-2">
+      <div className="bg-white border border-black/[.07] rounded-xl shadow-sm px-3 md:px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div className="flex items-center gap-3">
           <div className="flex gap-1">
             <button className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-100 text-gray-500"><ChevronLeft className="w-3.5 h-3.5" /></button>
@@ -106,15 +106,15 @@ export default function Dashboard() {
           <span className="text-[14px] font-semibold">{monthLabel}</span>
           <button className="text-[11px] px-2.5 py-1 rounded-md border border-black/10 hover:bg-gray-100">Hari ini</button>
         </div>
-        <div className="flex items-center gap-3 text-[11px] text-gray-500">
+        <div className="flex items-center gap-3 text-[11px] text-gray-500 flex-wrap">
           <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-500" />{data.alerts.fuOverdue} Overdue</span>
           <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-500" />{data.alerts.inactiveLeads} Inactive</span>
-          <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-green-500" />{data.alerts.wonThisMonth} Won bulan ini</span>
+          <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-green-500" />{data.alerts.wonThisMonth} Won</span>
         </div>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         <div className="bg-white border border-black/[.07] rounded-xl shadow-sm px-4 py-3 relative overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-[3px] bg-blue-500" />
           <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Monthly Revenue</div>

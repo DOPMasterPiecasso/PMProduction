@@ -114,10 +114,10 @@ export default function MessagesPage() {
   }
 
   return (
-    <div className="p-[20px_24px] flex flex-col gap-[16px]">
+    <div className="p-[12px_16px] md:p-[20px_24px] flex flex-col gap-[12px] md:gap-[16px]">
       <div>
-        <h1 className="text-[20px] font-semibold tracking-[-0.3px]">Riwayat Pesan</h1>
-        <p className="text-[13px] text-gray-400 mt-0.5">Log pengiriman invoice via WhatsApp</p>
+        <h1 className="text-[18px] md:text-[20px] font-semibold tracking-[-0.3px]">Riwayat Pesan</h1>
+        <p className="text-[12px] md:text-[13px] text-gray-400 mt-0.5">Log pengiriman invoice via WhatsApp</p>
       </div>
 
       <div className="flex items-center gap-3 flex-wrap">

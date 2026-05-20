@@ -16,6 +16,8 @@ import {
   Target,
   Settings,
   Send,
+  Menu,
+  X,
 } from "lucide-react";
 
 const salesItems = [
@@ -36,9 +38,7 @@ const reportItems = [
   { name: "Tim & KPI", href: "/team", icon: Target },
 ];
 
-const systemItems = [
-  { name: "Settings", href: "/settings", icon: Settings },
-];
+const systemItems = [{ name: "Settings", href: "/settings", icon: Settings }];
 
 function NavItem({
   name,
@@ -46,16 +46,19 @@ function NavItem({
   icon: Icon,
   badge,
   isActive,
+  onClick,
 }: {
   name: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   badge?: string;
   isActive: boolean;
+  onClick?: () => void;
 }) {
   return (
     <Link
       href={href}
+      onClick={onClick}
       className={`flex items-center gap-[8px] p-[7px_10px] rounded-[8px] text-[13px] transition-all duration-150 select-none ${
         isActive
           ? "bg-[#18181B] text-white font-medium"
@@ -90,12 +93,12 @@ function NavSection({ label, children }: { label: string; children: React.ReactN
   );
 }
 
-export function Sidebar() {
+function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
   const pathname = usePathname();
   const [studioName, setStudioName] = useState("CreativeOS");
 
   useEffect(() => {
-    fetch('/api/branding')
+    fetch("/api/branding")
       .then((r) => r.json())
       .then((data) => {
         if (data.studio_name) setStudioName(data.studio_name);
@@ -104,12 +107,12 @@ export function Sidebar() {
   }, []);
 
   return (
-    <aside className="w-[218px] min-w-[218px] bg-white border-r border-black/[.07] flex flex-col h-full font-sans">
+    <aside className="w-full bg-white flex flex-col h-full font-sans">
       {/* Logo */}
       <div className="pt-[16px] px-[14px] pb-[12px] border-b border-black/[.07] flex items-center gap-[9px]">
         <div className="w-[30px] h-[30px] bg-[#18181B] rounded-[8px] flex items-center justify-center shrink-0">
           <svg width="15" height="15" viewBox="0 0 24 24" stroke="white" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
           </svg>
         </div>
         <div>
@@ -120,12 +123,12 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto p-[8px] flex flex-col gap-[1px]">
-        {/* Dashboard - always on top */}
         <NavItem
           name="Dashboard"
           href="/"
           icon={LayoutDashboard}
           isActive={pathname === "/"}
+          onClick={onNavClick}
         />
 
         <NavSection label="Sales">
@@ -137,6 +140,7 @@ export function Sidebar() {
               icon={item.icon}
               badge={item.badge}
               isActive={pathname === item.href}
+              onClick={onNavClick}
             />
           ))}
         </NavSection>
@@ -150,6 +154,7 @@ export function Sidebar() {
               icon={item.icon}
               badge={item.badge}
               isActive={pathname === item.href}
+              onClick={onNavClick}
             />
           ))}
         </NavSection>
@@ -162,6 +167,7 @@ export function Sidebar() {
               href={item.href}
               icon={item.icon}
               isActive={pathname === item.href}
+              onClick={onNavClick}
             />
           ))}
         </NavSection>
@@ -174,6 +180,7 @@ export function Sidebar() {
               href={item.href}
               icon={item.icon}
               isActive={pathname === item.href}
+              onClick={onNavClick}
             />
           ))}
         </NavSection>
@@ -197,5 +204,68 @@ export function Sidebar() {
         </button>
       </div>
     </aside>
+  );
+}
+
+export function Sidebar() {
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const pathname = usePathname();
+
+  // Tutup drawer saat route berubah
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
+  return (
+    <>
+      {/* ── Desktop sidebar ── */}
+      <div className="hidden md:flex w-[218px] min-w-[218px] border-r border-black/[.07] h-full">
+        <SidebarContent />
+      </div>
+
+      {/* ── Mobile: top header bar ── */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-white border-b border-black/[.07] flex items-center gap-3 px-4 h-[52px]">
+        <button
+          onClick={() => setMobileOpen(true)}
+          className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-600"
+          aria-label="Buka menu"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 bg-[#18181B] rounded-[6px] flex items-center justify-center shrink-0">
+            <svg width="12" height="12" viewBox="0 0 24 24" stroke="white" fill="none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+            </svg>
+          </div>
+          <span className="text-[14px] font-semibold tracking-[-0.3px] text-[#18181B]">Sales OS</span>
+        </div>
+      </div>
+
+      {/* ── Mobile: overlay backdrop ── */}
+      {mobileOpen && (
+        <div
+          className="md:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* ── Mobile: slide-over drawer ── */}
+      <div
+        className={`md:hidden fixed top-0 left-0 bottom-0 z-50 w-[260px] bg-white shadow-2xl transition-transform duration-300 ease-in-out ${
+          mobileOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        {/* Close button */}
+        <button
+          onClick={() => setMobileOpen(false)}
+          className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100"
+          aria-label="Tutup menu"
+        >
+          <X className="w-4 h-4" />
+        </button>
+        <SidebarContent onNavClick={() => setMobileOpen(false)} />
+      </div>
+    </>
   );
 }

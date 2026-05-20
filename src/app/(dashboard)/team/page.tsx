@@ -91,12 +91,12 @@ export default function TeamPage() {
   }
 
   return (
-    <div className="p-[20px_24px] flex flex-col gap-[16px]">
+    <div className="p-[12px_16px] md:p-[20px_24px] flex flex-col gap-[12px] md:gap-[16px]">
       {/* Header */}
-      <div className="flex items-start justify-between flex-wrap gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-[20px] font-semibold tracking-[-0.3px]">Tim & KPI</h1>
-          <p className="text-[13px] text-gray-400 mt-0.5">Data otomatis per bulan - navigasi bulan di kanan</p>
+          <h1 className="text-[18px] md:text-[20px] font-semibold tracking-[-0.3px]">Tim & KPI</h1>
+          <p className="text-[12px] md:text-[13px] text-gray-400 mt-0.5">Data otomatis per bulan - navigasi bulan di kanan</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1 border border-black/10 rounded-lg px-2 py-1.5">
