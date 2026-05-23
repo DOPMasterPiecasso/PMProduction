@@ -8,6 +8,7 @@ export async function GET(req: Request) {
   const status = searchParams.get('status') ?? '';
   const type = searchParams.get('type') ?? '';
   const kota = searchParams.get('kota') ?? '';
+  const provinsi = searchParams.get('provinsi') ?? '';
   const serviceId = searchParams.get('serviceId') ?? '';
 
   try {
@@ -18,6 +19,7 @@ export async function GET(req: Request) {
           status ? { status } : {},
           type ? { clientType: { nama: type } } : {},
           kota ? { kota: { nama: kota } } : {},
+          provinsi ? { kota: { provinsi } } : {},
           serviceId ? { serviceId } : {},
         ],
       },

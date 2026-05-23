@@ -18,10 +18,12 @@ const MIME_TYPES: Record<string, string> = {
 };
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
   try {
+    const { searchParams } = new URL(req.url);
+    const isDownload = searchParams.get('download') === '1';
     const { path: segments } = await params;
 
     // Sanitize: cegah path traversal (../../etc)
@@ -43,15 +45,17 @@ export async function GET(
 
     const buffer = await readFile(absolutePath);
     const ext = absolutePath.split('.').pop()?.toLowerCase() || '';
-    const contentType = MIME_TYPES[ext] ?? 'application/octet-stream';
+    const contentType = isDownload ? 'application/octet-stream' : (MIME_TYPES[ext] ?? 'application/octet-stream');
+    const disposition = isDownload ? 'attachment' : 'inline';
+    const filename = cleanSegments[cleanSegments.length - 1] || 'file';
 
     return new Response(buffer, {
       status: 200,
       headers: {
         'Content-Type': contentType,
         'Content-Length': buffer.length.toString(),
-        'Cache-Control': 'public, max-age=31536000, immutable',
-        'Content-Disposition': 'inline',
+        'Cache-Control': isDownload ? 'no-cache' : 'public, max-age=31536000, immutable',
+        'Content-Disposition': `${disposition}; filename="${filename}"`,
       },
     });
   } catch (err: unknown) {

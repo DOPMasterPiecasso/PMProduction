@@ -3,16 +3,19 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET() {
   try {
-    const [users, services, systemSettings] = await Promise.all([
+    const [users, services, systemSettings, leadSources, activityTypes, cities] = await Promise.all([
       prisma.user.findMany({ select: { id: true, nama: true, email: true, role: true, isActive: true }, orderBy: { role: 'desc' } }),
       prisma.service.findMany({ orderBy: { createdAt: 'asc' } }),
       prisma.systemSetting.findMany(),
+      prisma.leadSource.findMany({ orderBy: { nama: 'asc' } }),
+      prisma.activityType.findMany({ orderBy: { nama: 'asc' } }),
+      prisma.city.findMany({ orderBy: { nama: 'asc' } }),
     ]);
 
     const settingsMap: Record<string, string> = {};
     for (const s of systemSettings as { key: string; value: string }[]) settingsMap[s.key] = s.value;
 
-    return NextResponse.json({ users, services, systemSettings: settingsMap });
+    return NextResponse.json({ users, services, systemSettings: settingsMap, leadSources, activityTypes, cities });
   } catch (error: unknown) {
     console.error('[SETTINGS GET]', error);
     return NextResponse.json({ error: 'Gagal memuat data' }, { status: 500 });

@@ -22,9 +22,10 @@ interface Client {
 }
 interface MetaOption { id: string; nama: string; }
 interface MetaService extends MetaOption { colorHex: string; }
+interface MetaCity extends MetaOption { provinsi: string | null }
 interface Meta {
   clientTypes: MetaOption[];
-  cities: MetaOption[];
+  cities: MetaCity[];
   sources: MetaOption[];
   services: MetaService[];
 }
@@ -285,13 +286,14 @@ export default function ClientsPage() {
   const [filterStatus, setFilterStatus] = useState('');
   const [filterType, setFilterType] = useState('');
   const [filterKota, setFilterKota] = useState('');
+  const [filterProvinsi, setFilterProvinsi] = useState('');
   const [filterService, setFilterService] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [deletingClient, setDeletingClient] = useState<Client | null>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const fetchClients = useCallback(async (q = search, s = filterStatus, t = filterType, k = filterKota, sv = filterService) => {
+  const fetchClients = useCallback(async (q = search, s = filterStatus, t = filterType, k = filterKota, p = filterProvinsi, sv = filterService) => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -299,6 +301,7 @@ export default function ClientsPage() {
       if (s) params.set('status', s);
       if (t) params.set('type', t);
       if (k) params.set('kota', k);
+      if (p) params.set('provinsi', p);
       if (sv) params.set('serviceId', sv);
       const res = await fetch(`/api/clients?${params}`);
       if (!res.ok) throw new Error();
@@ -310,34 +313,39 @@ export default function ClientsPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, filterStatus, filterType, filterKota, filterService, meta]);
+  }, [search, filterStatus, filterType, filterKota, filterProvinsi, filterService, meta]);
 
   useEffect(() => { fetchClients(); }, []);
 
   function handleSearch(val: string) {
     setSearch(val);
     if (searchTimer.current) clearTimeout(searchTimer.current);
-    searchTimer.current = setTimeout(() => fetchClients(val, filterStatus, filterType, filterKota, filterService), 400);
+    searchTimer.current = setTimeout(() => fetchClients(val, filterStatus, filterType, filterKota, filterProvinsi, filterService), 400);
   }
 
   function handleFilterStatus(val: string) {
     setFilterStatus(val);
-    fetchClients(search, val, filterType, filterKota, filterService);
+    fetchClients(search, val, filterType, filterKota, filterProvinsi, filterService);
   }
 
   function handleFilterType(val: string) {
     setFilterType(val);
-    fetchClients(search, filterStatus, val, filterKota, filterService);
+    fetchClients(search, filterStatus, val, filterKota, filterProvinsi, filterService);
   }
 
   function handleFilterKota(val: string) {
     setFilterKota(val);
-    fetchClients(search, filterStatus, filterType, val, filterService);
+    fetchClients(search, filterStatus, filterType, val, filterProvinsi, filterService);
+  }
+
+  function handleFilterProvinsi(val: string) {
+    setFilterProvinsi(val);
+    fetchClients(search, filterStatus, filterType, filterKota, val, filterService);
   }
 
   function handleFilterService(val: string) {
     setFilterService(val);
-    fetchClients(search, filterStatus, filterType, filterKota, val);
+    fetchClients(search, filterStatus, filterType, filterKota, filterProvinsi, val);
   }
 
   // Stats
@@ -475,6 +483,12 @@ export default function ClientsPage() {
           <select value={filterKota} onChange={(e) => handleFilterKota(e.target.value)} className="text-[12px] border border-black/[0.08] rounded-lg px-3 py-2 bg-white text-[#18181B] focus:outline-none">
             <option value="">Semua Kota</option>
             {meta?.cities.map((c) => <option key={c.id} value={c.nama}>{c.nama}</option>)}
+          </select>
+          <select value={filterProvinsi} onChange={(e) => handleFilterProvinsi(e.target.value)} className="text-[12px] border border-black/[0.08] rounded-lg px-3 py-2 bg-white text-[#18181B] focus:outline-none">
+            <option value="">Semua Provinsi</option>
+            {meta?.cities.filter((c, i, a) => c.provinsi && a.findIndex(x => x.provinsi === c.provinsi) === i).map((c) => (
+              <option key={c.id} value={c.provinsi!}>{c.provinsi}</option>
+            ))}
           </select>
           <select value={filterService} onChange={(e) => handleFilterService(e.target.value)} className="text-[12px] border border-black/[0.08] rounded-lg px-3 py-2 bg-white text-[#18181B] focus:outline-none">
             <option value="">Semua Layanan</option>

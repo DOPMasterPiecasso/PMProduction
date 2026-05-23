@@ -433,7 +433,7 @@ function DealModal({
               <div className="text-[14px] font-semibold text-[#18181B]">{deal.client.namaKlien}</div>
               <div className="text-[11.5px] text-gray-400 mt-0.5">
                 {(editForm.namaProject || deal.namaProject) ? `${editForm.namaProject || deal.namaProject} · ` : ''}
-                {deal.service?.nama || '—'} · {stages.find(s => s.id === selectedStageId)?.nama || '—'}
+                {deal.service?.nama || '—'} ·                 {stageLabel(stages.find(s => s.id === selectedStageId)?.nama || '—')}
                 {editForm.isHot && <span className="ml-1 text-[#EA580C]">🔥</span>}
               </div>
             </div>
@@ -467,7 +467,7 @@ function DealModal({
                 <label className="text-[10.5px] font-medium text-gray-600 block mb-1">Status Deal</label>
                 <select value={editForm.dealStatus} onChange={(e) => setEditForm((f) => ({ ...f, dealStatus: e.target.value }))} className={inputCls}>
                   <option value="active">Active</option>
-                  <option value="won">Won</option>
+                  <option value="won">Deal</option>
                   <option value="lost">Lost</option>
                 </select>
               </div>
@@ -543,7 +543,7 @@ function DealModal({
                 className="w-full text-[12px] border border-black/[0.1] rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-[#18181B]/10 text-[#18181B]"
               >
                 {stages.map((s) => (
-                  <option key={s.id} value={s.id}>{s.nama}</option>
+                  <option key={s.id} value={s.id}>{stageLabel(s.nama)}</option>
                 ))}
               </select>
             </div>

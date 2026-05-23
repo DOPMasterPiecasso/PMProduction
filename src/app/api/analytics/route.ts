@@ -9,7 +9,6 @@ type DealYTD = {
   service: { id: string; nama: string; colorHex: string } | null;
   client: { sourceId: string | null } | null;
 };
-type DealStageOnly = { stageId: string | null; dealStatus: string };
 
 export async function GET() {
   try {
@@ -31,22 +30,18 @@ export async function GET() {
     const avgDealSize = wonCount > 0 ? sumNilaiWon / wonCount : 0;
     const winRate = totalDealsYTD > 0 ? (wonCount / totalDealsYTD) * 100 : 0;
 
-    // Avg close time (days from tanggalMasuk to... we'll use days between created and now for won, or just estimate)
+    // Avg close time (days from tanggalMasuk to updatedAt for won deals)
     let avgCloseTime = 0;
     if (wonCount > 0) {
       const totalDays = wonDealsYTD.reduce((s: number, d: DealYTD) => {
-        const diff = now.getTime() - d.tanggalMasuk.getTime();
-        return s + Math.ceil(diff / (1000 * 60 * 60 * 24));
+        const closeDate = d.updatedAt || now;
+        const diff = closeDate.getTime() - d.tanggalMasuk.getTime();
+        return s + Math.max(1, Math.ceil(diff / (1000 * 60 * 60 * 24)));
       }, 0);
       avgCloseTime = Math.round(totalDays / wonCount);
     }
 
-    // ── Revenue per month (paid invoices) ────────────────────
-    const paidInvoices = await prisma.invoice.findMany({
-      where: { status: 'paid', tanggalTerbit: { gte: yearStart } },
-      select: { nominal: true, tanggalTerbit: true },
-    });
-
+    // ── Revenue per month (from won deals) ────────────────────
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
     const revenueByMonth: Record<string, number> = {};
     for (let i = 0; i < 12; i++) {
@@ -54,14 +49,14 @@ export async function GET() {
       revenueByMonth[key] = 0;
     }
     let ytdRevenue = 0;
-    for (const inv of paidInvoices as { nominal: number; tanggalTerbit: Date }[]) {
-      const m = inv.tanggalTerbit.getMonth();
-      const y = inv.tanggalTerbit.getFullYear();
-      if (y === year) {
-        const key = `${y}-${String(m + 1).padStart(2, '0')}`;
-        revenueByMonth[key] = (revenueByMonth[key] || 0) + inv.nominal;
-        ytdRevenue += inv.nominal;
+    for (const d of wonDealsYTD as DealYTD[]) {
+      const closeMonth = d.updatedAt.getMonth();
+      const closeYear = d.updatedAt.getFullYear();
+      const key = `${closeYear}-${String(closeMonth + 1).padStart(2, '0')}`;
+      if (revenueByMonth[key] !== undefined) {
+        revenueByMonth[key] += d.nilai;
       }
+      ytdRevenue += d.nilai;
     }
 
     const monthlyRevenue = Object.entries(revenueByMonth)
@@ -87,32 +82,33 @@ export async function GET() {
 
     // ── Funnel counts ────────────────────────────────────────
     const stages = await prisma.pipelineStage.findMany({ orderBy: { urutan: 'asc' } });
-    const allDealsWithStage = await prisma.deal.findMany({
+    const allDealsForFunnel = await prisma.deal.findMany({
       where: { dealStatus: { not: 'archived' } },
-      select: { stageId: true, dealStatus: true },
+      select: { stageId: true, dealStatus: true, tanggalMasuk: true, updatedAt: true },
     });
     const totalLeads = await prisma.lead.count();
+    const allWonCount = allDealsForFunnel.filter((d) => d.dealStatus === 'won').length;
+    const allLostCount = allDealsForFunnel.filter((d) => d.dealStatus === 'lost').length;
     const funnel: { stage: string; count: number; color: string }[] = [];
     for (const s of stages as { id: string; nama: string; urutan: number; probabilityDefault: number; colorHex: string; isTerminal: boolean }[]) {
       if (s.isTerminal && s.nama === 'Won') {
-        funnel.push({ stage: 'Deal Won', count: wonCount, color: '#16A34A' });
+        funnel.push({ stage: 'Deal Won', count: allWonCount, color: '#16A34A' });
       } else if (s.isTerminal && s.nama === 'Lost') {
-        funnel.push({ stage: 'Lost', count: lostDealsYTD.length, color: '#94A3B8' });
+        funnel.push({ stage: 'Lost', count: allLostCount, color: '#94A3B8' });
       } else {
-        const count = allDealsWithStage.filter((d: DealStageOnly) => d.stageId === s.id).length;
+        const count = allDealsForFunnel.filter((d) => d.stageId === s.id).length;
         funnel.push({ stage: s.nama, count, color: s.colorHex });
       }
     }
 
     // Also add Lead at top (from Lead model, not Deal)
     if (stages.length > 0 && stages[0].nama === 'Lead') {
-      // Replace the "Lead" in funnel with actual lead count + deal lead count
       const leadStageId = stages[0].id;
-      const dealLeadCount = allDealsWithStage.filter((d: DealStageOnly) => d.stageId === leadStageId).length;
+      const dealLeadCount = allDealsForFunnel.filter((d) => d.stageId === leadStageId).length;
       funnel[0] = { ...funnel[0], count: totalLeads + dealLeadCount };
     }
 
-    // Funnel metrics
+    // Funnel metrics (use all-time won/lost for consistency)
     const contactedIdx = funnel.findIndex((f) => f.stage === 'Contacted');
     const wonIdx = funnel.findIndex((f) => f.stage === 'Deal Won');
     const negoIdx = funnel.findIndex((f) => f.stage === 'Negotiation');
@@ -121,13 +117,13 @@ export async function GET() {
     const contactedCount = contactedIdx >= 0 ? funnel[contactedIdx].count : 0;
     const wonFunnelCount = wonIdx >= 0 ? funnel[wonIdx].count : 0;
     const negoCount = negoIdx >= 0 ? funnel[negoIdx].count : 0;
-    const lostCount = lostIdx >= 0 ? funnel[lostIdx].count : 0;
+    const allDealsTotal = allDealsForFunnel.length;
 
     const funnelMetrics = {
       conversion: leadCount > 0 ? (wonFunnelCount / leadCount) * 100 : 0,
       leadToContact: leadCount > 0 ? (contactedCount / leadCount) * 100 : 0,
       negoToDeal: negoCount > 0 ? (wonFunnelCount / negoCount) * 100 : 0,
-      lostRate: totalDealsYTD > 0 ? (lostCount / totalDealsYTD) * 100 : 0,
+      lostRate: allDealsTotal > 0 ? (allLostCount / allDealsTotal) * 100 : 0,
     };
 
     // ── Revenue per service ──────────────────────────────────

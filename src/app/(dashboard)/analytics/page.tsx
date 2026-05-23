@@ -71,7 +71,7 @@ export default function AnalyticsPage() {
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-[18px] md:text-[20px] font-semibold tracking-[-0.3px]">Analytics</h1>
-          <p className="text-[12px] md:text-[13px] text-gray-400 mt-0.5">Hanya invoice Paid yang dihitung sebagai revenue</p>
+          <p className="text-[12px] md:text-[13px] text-gray-400 mt-0.5">Revenue berdasarkan deal Won (updatedAt)</p>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-[13px] font-semibold">{thisMonthLabel} {now.getFullYear()}</span>
@@ -116,7 +116,7 @@ export default function AnalyticsPage() {
         <div className="flex items-center justify-between px-4 py-3 border-b border-black/5">
           <div>
             <div className="text-[13px] font-semibold">Revenue per Bulan vs Target</div>
-            <div className="text-[11px] text-gray-400 mt-0.5">Hanya invoice Paid - batang biru = actual, garis = target</div>
+            <div className="text-[11px] text-gray-400 mt-0.5">Revenue dari deal Won - batang biru = actual, garis = target</div>
           </div>
         </div>
         <div className="p-4">
@@ -181,7 +181,7 @@ export default function AnalyticsPage() {
         <div className="flex items-center justify-between px-4 py-3 border-b border-black/5">
           <div>
             <div className="text-[13px] font-semibold">Revenue Bulanan vs Bulan Sebelumnya</div>
-            <div className="text-[11px] text-gray-400 mt-0.5">Perbandingan bulan ke bulan - hanya invoice Paid</div>
+            <div className="text-[11px] text-gray-400 mt-0.5">Perbandingan bulan ke bulan - revenue dari deal Won</div>
           </div>
         </div>
         <div className="p-4">

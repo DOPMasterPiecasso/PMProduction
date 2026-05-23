@@ -1,12 +1,15 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Loader2, Plus, Trash2, MessageSquare, RotateCcw } from 'lucide-react';
+import { Loader2, Plus, Trash2, MessageSquare, RotateCcw, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { DEFAULT_TEMPLATE_INVOICE, DEFAULT_TEMPLATE_PAYMENT } from '@/lib/whatsapp';
 
 interface User { id: string; nama: string; email: string; role: string; isActive: boolean }
 interface Service { id: string; nama: string; deskripsi: string; colorHex: string; isActive: boolean }
+interface LeadSource { id: string; nama: string; isActive: boolean }
+interface ActivityTypeItem { id: string; nama: string; colorHex: string; icon: string | null }
+interface CityItem { id: string; nama: string; provinsi: string | null }
 
 const ROLE_LABELS: Record<string, string> = {
   owner: 'Owner / Manager', manager: 'Manager', ae: 'AE (Account Executive)', editor: 'Editor', admin: 'Admin',
@@ -15,6 +18,7 @@ const ROLE_LABELS: Record<string, string> = {
 export default function SettingsPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [services, setServices] = useState<Service[]>([]);
+  const [sources, setSources] = useState<LeadSource[]>([]);
   const [systemSettings, setSystemSettings] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
 
@@ -34,6 +38,9 @@ export default function SettingsPage() {
 
   const serviceColors = ['#2563EB', '#16A34A', '#7C3AED', '#D97706', '#94A3B8', '#DC2626', '#0891B2', '#D946EF'];
 
+  const [activityTypes, setActivityTypes] = useState<ActivityTypeItem[]>([]);
+  const [cities, setCities] = useState<CityItem[]>([]);
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
@@ -42,6 +49,9 @@ export default function SettingsPage() {
       const data = await res.json();
       setUsers(data.users || []);
       setServices(data.services || []);
+      setSources(data.leadSources || []);
+      setActivityTypes(data.activityTypes || []);
+      setCities(data.cities || []);
       setSystemSettings(data.systemSettings || {});
     } catch { toast.error('Gagal memuat data'); }
     finally { setLoading(false); }
@@ -142,6 +152,204 @@ export default function SettingsPage() {
       setNewSvc({ nama: '', deskripsi: '', colorHex: '#2563EB' });
       fetchData();
     } catch { toast.error('Gagal menambah layanan'); }
+  }
+
+  // ─── Lead Source CRUD ──────────────────────────────────────
+  const [editingSource, setEditingSource] = useState<string | null>(null);
+  const [editSourceData, setEditSourceData] = useState<{ nama: string }>({ nama: '' });
+  const [showAddSource, setShowAddSource] = useState(false);
+  const [newSource, setNewSource] = useState({ nama: '' });
+
+  // ─── Activity Type CRUD ──────────────────────────────────────
+  const [editingType, setEditingType] = useState<string | null>(null);
+  const [editTypeData, setEditTypeData] = useState<{ nama: string; colorHex: string }>({ nama: '', colorHex: '#2563EB' });
+  const [showAddType, setShowAddType] = useState(false);
+  const [newType, setNewType] = useState({ nama: '', colorHex: '#2563EB' });
+  const typeColors = ['#2563EB', '#16A34A', '#7C3AED', '#D97706', '#DC2626', '#0891B2', '#D946EF', '#94A3B8'];
+
+  // ─── City CRUD ────────────────────────────────────────────
+  const [editingCity, setEditingCity] = useState<string | null>(null);
+  const [editCityData, setEditCityData] = useState<{ nama: string; provinsi: string }>({ nama: '', provinsi: '' });
+  const [showAddCity, setShowAddCity] = useState(false);
+  const [newCity, setNewCity] = useState({ nama: '', provinsi: '' });
+  const [importing, setImporting] = useState(false);
+
+  async function handleUpdateCity(id: string) {
+    if (!editCityData.nama.trim()) { toast.error('Nama kota wajib diisi'); return; }
+    try {
+      const res = await fetch(`/api/settings/cities/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editCityData),
+      });
+      if (!res.ok) throw new Error();
+      toast.success('Kota diperbarui');
+      setEditingCity(null);
+      fetchData();
+    } catch { toast.error('Gagal mengupdate kota'); }
+  }
+
+  async function handleDeleteCity(id: string, name: string) {
+    if (!confirm(`Hapus kota "${name}"?`)) return;
+    try {
+      const res = await fetch(`/api/settings/cities/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error();
+      toast.success(`Kota "${name}" dihapus`);
+      fetchData();
+    } catch { toast.error('Gagal menghapus kota'); }
+  }
+
+  async function handleAddCity() {
+    if (!newCity.nama.trim()) { toast.error('Nama kota wajib diisi'); return; }
+    try {
+      const res = await fetch('/api/settings/cities', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newCity),
+      });
+      if (!res.ok) throw new Error();
+      toast.success('Kota baru ditambahkan');
+      setShowAddCity(false);
+      setNewCity({ nama: '', provinsi: '' });
+      fetchData();
+    } catch { toast.error('Gagal menambah kota'); }
+  }
+
+  function downloadTemplate() {
+    const a = document.createElement('a');
+    a.href = '/api/settings/cities/download?mode=template';
+    a.download = 'template-kota.csv';
+    a.click();
+  }
+
+  async function exportCitiesCSV() {
+    try {
+      const res = await fetch('/api/settings/cities/download?mode=export');
+      if (!res.ok) throw new Error();
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `database-kota-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`Berhasil mengekspor ${cities.length} kota`);
+    } catch { toast.error('Gagal mengekspor CSV'); }
+  }
+
+  async function handleImportCSV(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('/api/settings/cities/import', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast.success(`${data.imported} kota diimpor${data.skipped > 0 ? `, ${data.skipped} dilewati (duplikat)` : ''}`);
+      if (data.errors?.length > 0) {
+        data.errors.forEach((err: string) => toast.error(err));
+      }
+      fetchData();
+    } catch { toast.error('Gagal mengimpor CSV'); }
+    finally { setImporting(false); e.target.value = ''; }
+  }
+
+  async function handleToggleSource(src: LeadSource) {
+    try {
+      const res = await fetch(`/api/settings/sources/${src.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: !src.isActive }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success(src.isActive ? 'Sumber dinonaktifkan' : 'Sumber diaktifkan');
+      fetchData();
+    } catch { toast.error('Gagal mengupdate sumber'); }
+  }
+
+  async function handleUpdateSource(id: string) {
+    if (!editSourceData.nama.trim()) { toast.error('Nama sumber wajib diisi'); return; }
+    try {
+      const res = await fetch(`/api/settings/sources/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editSourceData),
+      });
+      if (!res.ok) throw new Error();
+      toast.success('Sumber diperbarui');
+      setEditingSource(null);
+      fetchData();
+    } catch { toast.error('Gagal mengupdate sumber'); }
+  }
+
+  async function handleDeleteSource(id: string, name: string) {
+    if (!confirm(`Hapus sumber "${name}"?`)) return;
+    try {
+      const res = await fetch(`/api/settings/sources/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error();
+      toast.success(`Sumber "${name}" dihapus`);
+      fetchData();
+    } catch { toast.error('Gagal menghapus sumber'); }
+  }
+
+  async function handleAddSource() {
+    if (!newSource.nama.trim()) { toast.error('Nama sumber wajib diisi'); return; }
+    try {
+      const res = await fetch('/api/settings/sources', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newSource),
+      });
+      if (!res.ok) throw new Error();
+      toast.success('Sumber baru ditambahkan');
+      setShowAddSource(false);
+      setNewSource({ nama: '' });
+      fetchData();
+    } catch { toast.error('Gagal menambah sumber'); }
+  }
+
+  // ─── Activity Type CRUD ────────────────────────────────────
+  async function handleUpdateType(id: string) {
+    if (!editTypeData.nama.trim()) { toast.error('Nama tipe wajib diisi'); return; }
+    try {
+      const res = await fetch(`/api/settings/activity-types/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editTypeData),
+      });
+      if (!res.ok) throw new Error();
+      toast.success('Tipe aktivitas diperbarui');
+      setEditingType(null);
+      fetchData();
+    } catch { toast.error('Gagal mengupdate tipe aktivitas'); }
+  }
+
+  async function handleDeleteType(id: string, name: string) {
+    if (!confirm(`Hapus tipe aktivitas "${name}"?`)) return;
+    try {
+      const res = await fetch(`/api/settings/activity-types/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error();
+      toast.success(`Tipe "${name}" dihapus`);
+      fetchData();
+    } catch { toast.error('Gagal menghapus tipe aktivitas'); }
+  }
+
+  async function handleAddType() {
+    if (!newType.nama.trim()) { toast.error('Nama tipe wajib diisi'); return; }
+    try {
+      const res = await fetch('/api/settings/activity-types', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newType),
+      });
+      if (!res.ok) throw new Error();
+      toast.success('Tipe aktivitas baru ditambahkan');
+      setShowAddType(false);
+      setNewType({ nama: '', colorHex: '#2563EB' });
+      fetchData();
+    } catch { toast.error('Gagal menambah tipe aktivitas'); }
   }
 
   // ─── System Settings ────────────────────────────────────────
@@ -348,6 +556,228 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+
+        {/* ── Lead Source Management ──────────────────────────── */}
+        <div className="bg-white border border-black/[.07] rounded-xl shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-black/5">
+            <div>
+              <div className="text-[13px] font-semibold">Kelola Sumber Lead</div>
+              <div className="text-[11px] text-gray-400 mt-0.5">WhatsApp Admin, DM Instagram, DM TikTok, referral, dll</div>
+            </div>
+            <button onClick={() => setShowAddSource(true)} className="bg-[#18181B] text-white text-[11.5px] font-medium px-2.5 py-1.5 rounded-lg hover:opacity-85 flex items-center gap-1">
+              <Plus className="w-3 h-3" /> Tambah Sumber
+            </button>
+          </div>
+          <div className="flex flex-col">
+            {sources.length === 0 ? (
+              <div className="px-4 py-6 text-center text-[12px] text-gray-400">Belum ada sumber lead. Tambah sumber baru.</div>
+            ) : (
+              sources.map((src) => {
+                const isEditing = editingSource === src.id;
+                return (
+                  <div key={src.id} className="flex items-center gap-2.5 px-4 py-2.5 border-b border-black/5 last:border-b-0">
+                    <div className="w-2 h-2 rounded-full shrink-0" style={{ background: src.isActive ? '#16A34A' : '#9CA3AF' }} />
+                    <div className="flex-1 min-w-0">
+                      {isEditing ? (
+                        <input value={editSourceData.nama} onChange={(e) => setEditSourceData({ ...editSourceData, nama: e.target.value })}
+                          className="text-[12px] border border-black/10 rounded-md px-2 py-1 w-full focus:outline-none focus:border-blue-400" />
+                      ) : (
+                        <>
+                          <div className="text-[13px] font-medium">{src.nama}</div>
+                          <div className="text-[10.5px] text-gray-400">{src.isActive ? 'Aktif' : 'Non-aktif'}</div>
+                        </>
+                      )}
+                    </div>
+                    <span className={`inline-flex text-[10px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap ${src.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                      {src.isActive ? 'Aktif' : 'Non-aktif'}
+                    </span>
+                    {isEditing ? (
+                      <div className="flex gap-1 shrink-0">
+                        <button onClick={() => handleUpdateSource(src.id)} className="text-[10.5px] px-2 py-1 rounded-md border border-black/10 hover:bg-gray-100">Simpan</button>
+                        <button onClick={() => handleDeleteSource(src.id, src.nama)} className="text-[10.5px] px-2 py-1 rounded-md border border-red-200 text-red-600 hover:bg-red-50"><Trash2 className="w-3 h-3" /></button>
+                        <button onClick={() => setEditingSource(null)} className="text-[10.5px] px-2 py-1 text-gray-400 hover:text-gray-600">Batal</button>
+                      </div>
+                    ) : (
+                      <div className="flex gap-1 shrink-0">
+                        {!src.isActive && (
+                          <button onClick={() => handleToggleSource(src)} className="text-[10.5px] px-2 py-1 rounded-md border border-black/10 hover:bg-gray-100">Aktifkan</button>
+                        )}
+                        <button onClick={() => { setEditingSource(src.id); setEditSourceData({ nama: src.nama }); }} className="text-[10.5px] px-2 py-1 rounded-md border border-black/10 hover:bg-gray-100">
+                          {src.isActive ? 'Edit' : 'Edit'}
+                        </button>
+                        <button onClick={() => handleToggleSource(src)} className="text-[10.5px] px-2 py-1 rounded-md border border-black/10 hover:bg-gray-100">
+                          {src.isActive ? 'Nonaktifkan' : '-'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        {/* ── Activity Type Management ──────────────────────────── */}
+        <div className="bg-white border border-black/[.07] rounded-xl shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-black/5">
+            <div>
+              <div className="text-[13px] font-semibold">Kelola Tipe Aktivitas</div>
+              <div className="text-[11px] text-gray-400 mt-0.5">Call, Meeting, Chat/WA, Proposal, Visit, Email, Follow Up, dll</div>
+            </div>
+            <button onClick={() => setShowAddType(true)} className="bg-[#18181B] text-white text-[11.5px] font-medium px-2.5 py-1.5 rounded-lg hover:opacity-85 flex items-center gap-1">
+              <Plus className="w-3 h-3" /> Tambah Tipe
+            </button>
+          </div>
+          <div className="flex flex-col">
+            {activityTypes.length === 0 ? (
+              <div className="px-4 py-6 text-center text-[12px] text-gray-400">Belum ada tipe aktivitas.</div>
+            ) : (
+              activityTypes.map((t, idx) => {
+                const isEditing = editingType === t.id;
+                const color = t.colorHex || typeColors[idx % typeColors.length];
+                return (
+                  <div key={t.id} className="flex items-center gap-2.5 px-4 py-2.5 border-b border-black/5 last:border-b-0">
+                    <div className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />
+                    <div className="flex-1 min-w-0">
+                      {isEditing ? (
+                        <div className="flex items-center gap-2">
+                          <input value={editTypeData.nama} onChange={(e) => setEditTypeData({ ...editTypeData, nama: e.target.value })}
+                            className="text-[12px] border border-black/10 rounded-md px-2 py-1 w-[160px] focus:outline-none focus:border-blue-400" />
+                          <input type="color" value={editTypeData.colorHex} onChange={(e) => setEditTypeData({ ...editTypeData, colorHex: e.target.value })}
+                            className="w-6 h-6 p-0 border border-black/10 rounded cursor-pointer" />
+                        </div>
+                      ) : (
+                        <div className="text-[13px] font-medium">{t.nama}</div>
+                      )}
+                    </div>
+                    {isEditing ? (
+                      <div className="flex gap-1 shrink-0">
+                        <button onClick={() => handleUpdateType(t.id)} className="text-[10.5px] px-2 py-1 rounded-md border border-black/10 hover:bg-gray-100">Simpan</button>
+                        <button onClick={() => handleDeleteType(t.id, t.nama)} className="text-[10.5px] px-2 py-1 rounded-md border border-red-200 text-red-600 hover:bg-red-50"><Trash2 className="w-3 h-3" /></button>
+                        <button onClick={() => setEditingType(null)} className="text-[10.5px] px-2 py-1 text-gray-400 hover:text-gray-600">Batal</button>
+                      </div>
+                    ) : (
+                      <div className="flex gap-1 shrink-0">
+                        <button onClick={() => { setEditingType(t.id); setEditTypeData({ nama: t.nama, colorHex: t.colorHex }); }} className="text-[10.5px] px-2 py-1 rounded-md border border-black/10 hover:bg-gray-100">Edit</button>
+                        <button onClick={() => handleDeleteType(t.id, t.nama)} className="text-[10.5px] px-2 py-1 rounded-md border border-red-200 text-red-600 hover:bg-red-50"><Trash2 className="w-3 h-3" /></button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+          {showAddType && (
+            <div className="border-t border-black/5 px-4 py-3 flex items-center gap-2 bg-gray-50">
+              <input value={newType.nama} onChange={(e) => setNewType({ ...newType, nama: e.target.value })}
+                placeholder="Nama tipe baru"
+                className="text-[12px] border border-black/10 rounded-md px-2 py-1 w-[160px] focus:outline-none focus:border-blue-400" />
+              <input type="color" value={newType.colorHex} onChange={(e) => setNewType({ ...newType, colorHex: e.target.value })}
+                className="w-6 h-6 p-0 border border-black/10 rounded cursor-pointer" />
+              <button onClick={handleAddType} className="text-[10.5px] px-2.5 py-1 rounded-md bg-[#18181B] text-white hover:opacity-85">Tambah</button>
+              <button onClick={() => { setShowAddType(false); setNewType({ nama: '', colorHex: '#2563EB' }); }} className="text-[10.5px] px-2.5 py-1 text-gray-400 hover:text-gray-600">Batal</button>
+            </div>
+          )}
+        </div>
+
+        {/* ── City Management ──────────────────────────────────── */}
+        <div className="bg-white border border-black/[.07] rounded-xl shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-black/5">
+            <div>
+              <div className="text-[13px] font-semibold">Master Kota & Provinsi</div>
+              <div className="text-[11px] text-gray-400 mt-0.5">Data kota dipakai di form Klien. Import/export via CSV.</div>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <button onClick={downloadTemplate} className="text-[10.5px] px-2 py-1.5 rounded-md border border-black/10 hover:bg-gray-100">Download Template CSV</button>
+              <button onClick={exportCitiesCSV} className="text-[10.5px] px-2 py-1.5 rounded-md border border-black/10 hover:bg-gray-100">Export CSV</button>
+              <label className="text-[10.5px] px-2.5 py-1.5 rounded-md bg-[#18181B] text-white hover:opacity-85 flex items-center gap-1 cursor-pointer">
+                <Upload className="w-3 h-3" />
+                {importing ? 'Mengimpor...' : 'Import CSV'}
+                <input type="file" accept=".csv" className="hidden" onChange={handleImportCSV} disabled={importing} />
+              </label>
+              <button onClick={() => setShowAddCity(true)} className="bg-[#18181B] text-white text-[11.5px] font-medium px-2.5 py-1.5 rounded-lg hover:opacity-85 flex items-center gap-1">
+                <Plus className="w-3 h-3" /> Tambah Kota
+              </button>
+            </div>
+          </div>
+          {importing && (
+            <div className="px-4 py-2 bg-blue-50 border-b border-blue-200 text-[11px] text-blue-700 flex items-center gap-2">
+              <Loader2 className="w-3 h-3 animate-spin" /> Mengimpor data...
+            </div>
+          )}
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-[#EFEEEA]/50 border-b border-black/5">
+                  <th className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 p-2.5 text-left">Kota</th>
+                  <th className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 p-2.5 text-left">Provinsi</th>
+                  <th className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 p-2.5 text-left">Jumlah Klien</th>
+                  <th className="w-[100px]"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {cities.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-8 text-center text-[12px] text-gray-400">
+                      Belum ada data kota. Tambah manual atau import CSV.
+                    </td>
+                  </tr>
+                ) : (
+                  cities.map((c) => {
+                    const isEditing = editingCity === c.id;
+                    return (
+                      <tr key={c.id} className="border-b border-black/5 hover:bg-gray-50/50">
+                        <td className="p-2.5">
+                          {isEditing ? (
+                            <input value={editCityData.nama} onChange={(e) => setEditCityData({ ...editCityData, nama: e.target.value })}
+                              className="text-[12px] border border-black/10 rounded-md px-2 py-1 w-[140px] focus:outline-none focus:border-blue-400" />
+                          ) : (
+                            <span className="text-[12.5px] font-medium">{c.nama}</span>
+                          )}
+                        </td>
+                        <td className="p-2.5">
+                          {isEditing ? (
+                            <input value={editCityData.provinsi} onChange={(e) => setEditCityData({ ...editCityData, provinsi: e.target.value })}
+                              className="text-[12px] border border-black/10 rounded-md px-2 py-1 w-[140px] focus:outline-none focus:border-blue-400" />
+                          ) : (
+                            <span className="text-[12px] text-gray-500">{c.provinsi || '-'}</span>
+                          )}
+                        </td>
+                        <td className="p-2.5 text-[12px] text-gray-400">-</td>
+                        <td className="p-2.5">
+                          {isEditing ? (
+                            <div className="flex gap-1">
+                              <button onClick={() => handleUpdateCity(c.id)} className="text-[10.5px] px-2 py-1 rounded-md border border-black/10 hover:bg-gray-100">Simpan</button>
+                              <button onClick={() => handleDeleteCity(c.id, c.nama)} className="text-[10.5px] px-2 py-1 rounded-md border border-red-200 text-red-600 hover:bg-red-50"><Trash2 className="w-3 h-3" /></button>
+                              <button onClick={() => setEditingCity(null)} className="text-[10.5px] px-2 py-1 text-gray-400 hover:text-gray-600">Batal</button>
+                            </div>
+                          ) : (
+                            <div className="flex gap-1">
+                              <button onClick={() => { setEditingCity(c.id); setEditCityData({ nama: c.nama, provinsi: c.provinsi || '' }); }} className="text-[10.5px] px-2 py-1 rounded-md border border-black/10 hover:bg-gray-100">Edit</button>
+                              <button onClick={() => handleDeleteCity(c.id, c.nama)} className="text-[10.5px] px-2 py-1 rounded-md border border-red-200 text-red-600 hover:bg-red-50"><Trash2 className="w-3 h-3" /></button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+          {showAddCity && (
+            <div className="border-t border-black/5 px-4 py-3 flex items-center gap-2 bg-gray-50">
+              <input value={newCity.nama} onChange={(e) => setNewCity({ ...newCity, nama: e.target.value })}
+                placeholder="Nama kota"
+                className="text-[12px] border border-black/10 rounded-md px-2 py-1 w-[160px] focus:outline-none focus:border-blue-400" />
+              <input value={newCity.provinsi} onChange={(e) => setNewCity({ ...newCity, provinsi: e.target.value })}
+                placeholder="Provinsi"
+                className="text-[12px] border border-black/10 rounded-md px-2 py-1 w-[160px] focus:outline-none focus:border-blue-400" />
+              <button onClick={handleAddCity} className="text-[10.5px] px-2.5 py-1 rounded-md bg-[#18181B] text-white hover:opacity-85">Tambah</button>
+              <button onClick={() => { setShowAddCity(false); setNewCity({ nama: '', provinsi: '' }); }} className="text-[10.5px] px-2.5 py-1 text-gray-400 hover:text-gray-600">Batal</button>
+            </div>
+          )}
+        </div>
 
       {/* ── System Preferences ────────────────────────────────── */}
       <div className="bg-white border border-black/[.07] rounded-xl shadow-sm">
@@ -674,6 +1104,28 @@ export default function SettingsPage() {
             <div className="flex justify-end gap-2 px-5 py-4 border-t border-black/[0.07]">
               <button onClick={() => setShowAddService(false)} className="text-[12px] px-4 py-2 rounded-lg border border-black/10 text-gray-600 hover:bg-gray-50">Batal</button>
               <button onClick={handleAddService} className="bg-[#18181B] text-white text-[12px] px-4 py-2 rounded-lg font-medium hover:opacity-85">Tambah</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Add Source Modal ──────────────────────────────────── */}
+      {showAddSource && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget) setShowAddSource(false); }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-black/[0.07]">
+              <span className="text-[14px] font-semibold">Tambah Sumber Lead</span>
+              <button onClick={() => setShowAddSource(false)} className="w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 text-[16px]">×</button>
+            </div>
+            <div className="px-5 py-4 flex flex-col gap-4">
+              <div>
+                <label className="text-[11.5px] font-medium text-gray-600 block mb-1">Nama Sumber</label>
+                <input value={newSource.nama} onChange={(e) => setNewSource({ ...newSource, nama: e.target.value })} className="w-full text-[12px] border border-black/10 rounded-lg px-3 py-2 focus:outline-none" placeholder="Contoh: DM Instagram" />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 px-5 py-4 border-t border-black/[0.07]">
+              <button onClick={() => setShowAddSource(false)} className="text-[12px] px-4 py-2 rounded-lg border border-black/10 text-gray-600 hover:bg-gray-50">Batal</button>
+              <button onClick={handleAddSource} className="bg-[#18181B] text-white text-[12px] px-4 py-2 rounded-lg font-medium hover:opacity-85">Tambah</button>
             </div>
           </div>
         </div>

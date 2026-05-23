@@ -76,16 +76,6 @@ const emptyForm: ActivityForm = {
   fileName: '',
 };
 
-const typeColors: Record<string, string> = {
-  Call: 'bg-blue-100 text-blue-700',
-  Meeting: 'bg-green-100 text-green-700',
-  'Chat/WA': 'bg-green-100 text-green-700',
-  Proposal: 'bg-amber-100 text-amber-700',
-  Visit: 'bg-purple-100 text-purple-700',
-  Email: 'bg-gray-100 text-gray-600',
-  'Follow Up': 'bg-red-100 text-red-700',
-};
-
 const DAYS = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
 const MONTHS = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
@@ -291,6 +281,7 @@ export default function AktivitasPage() {
   const [activeTab, setActiveTab] = useState('overdue');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [picFilter, setPicFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -307,6 +298,7 @@ export default function AktivitasPage() {
       if (selectedDate) params.set('date', selectedDate);
       params.set('month', `${calDate.getFullYear()}-${String(calDate.getMonth() + 1).padStart(2, '0')}`);
       if (picFilter) params.set('picId', picFilter);
+      if (typeFilter) params.set('typeId', typeFilter);
       if (search) params.set('search', search);
 
       const res = await fetch(`/api/aktivitas?${params}`);
@@ -321,7 +313,7 @@ export default function AktivitasPage() {
     } finally {
       setLoading(false);
     }
-  }, [activeTab, selectedDate, calDate, picFilter, search]);
+  }, [activeTab, selectedDate, calDate, picFilter, typeFilter, search]);
 
   useEffect(() => {
     fetchData();
@@ -548,6 +540,19 @@ export default function AktivitasPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v ?? '')}>
+              <SelectTrigger className="h-7 text-[11.5px]">
+                <SelectValue placeholder="Semua Tipe">
+                  {typeFilter ? meta.activityTypes.find(t => t.id === typeFilter)?.nama : 'Semua Tipe'}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Semua Tipe</SelectItem>
+                {meta.activityTypes.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>{t.nama}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Select value={picFilter} onValueChange={(v) => setPicFilter(v ?? '')}>
               <SelectTrigger className="h-7 text-[11.5px]">
                 <SelectValue placeholder="Semua PIC">
@@ -582,15 +587,39 @@ export default function AktivitasPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium text-[12.5px]">{a.client?.namaKlien || a.deal?.client?.namaKlien || '-'}</span>
-                      <span className={`text-[10.5px] px-1.5 py-0.5 rounded-full ${typeColors[a.type?.nama || ''] || 'bg-gray-100 text-gray-600'}`}>
-                        {a.type?.nama || '-'}
-                      </span>
+                      {(function() { const t = meta.activityTypes.find(at => at.id === a.typeId); return (
+                        <span className="text-[10.5px] px-1.5 py-0.5 rounded-full text-white" style={{ backgroundColor: t?.colorHex || '#6B7280' }}>
+                          {t?.nama || '-'}
+                        </span>
+                      ); })()}
                       <span className={`text-[10.5px] font-mono ${isOverdue ? 'text-red-600' : 'text-gray-400'}`}>
                         {formatDisplay(a.tanggalAktivitas)}
                       </span>
                     </div>
                     <div className="text-[11.5px] text-gray-500 mt-0.5 truncate">{a.catatan || '-'}</div>
                     <div className="text-[11px] text-gray-400 mt-1">PIC: {a.pic?.nama || '-'}</div>
+                    {a.fileUrl && (
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <a
+                          href={a.fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-[11px] text-blue-600 hover:underline flex items-center gap-1"
+                        >
+                          <FileText className="w-3 h-3" />
+                          {a.fileName || 'File'}
+                        </a>
+                        <a
+                          href={`${a.fileUrl}?download=1`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-[10px] px-1.5 py-0.5 rounded border border-black/10 text-gray-500 hover:bg-gray-100"
+                          title="Download"
+                        >
+                          Download
+                        </a>
+                      </div>
+                    )}
                   </div>
                   <div className="flex gap-1.5 flex-shrink-0">
                     {!a.isDone && (
@@ -657,9 +686,11 @@ export default function AktivitasPage() {
                     <tr key={a.id} className="border-b border-black/5 hover:bg-gray-50/50 cursor-pointer" onClick={() => openEdit(a)}>
                       <td className="p-2.5 text-[12px] font-mono text-gray-500">{formatDisplay(a.tanggalAktivitas)}</td>
                       <td className="p-2.5">
-                        <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${typeColors[a.type?.nama || ''] || 'bg-gray-100 text-gray-600'}`}>
-                          {a.type?.nama || '-'}
-                        </span>
+                        {(function() { const t = meta.activityTypes.find(at => at.id === a.typeId); return (
+                          <span className="text-[11px] px-1.5 py-0.5 rounded-full text-white" style={{ backgroundColor: t?.colorHex || '#6B7280' }}>
+                            {t?.nama || '-'}
+                          </span>
+                        ); })()}
                       </td>
                       <td className="p-2.5 text-[12.5px] font-medium">{a.client?.namaKlien || a.deal?.client?.namaKlien || '-'}</td>
                       <td className="p-2.5 text-[12px] text-gray-600">{a.pic?.nama || '-'}</td>
@@ -670,16 +701,26 @@ export default function AktivitasPage() {
                       </td>
                       <td className="p-2.5">
                         {a.fileUrl ? (
-                          <a
-                            href={a.fileUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="text-[11px] text-blue-600 hover:underline flex items-center gap-1"
-                          >
-                            <FileText className="w-3 h-3" />
-                            {a.fileName || 'File'}
-                          </a>
+                          <div className="flex items-center gap-1">
+                            <a
+                              href={a.fileUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-[11px] text-blue-600 hover:underline flex items-center gap-1"
+                            >
+                              <FileText className="w-3 h-3" />
+                              <span className="truncate max-w-[80px]">{a.fileName || 'File'}</span>
+                            </a>
+                            <a
+                              href={`${a.fileUrl}?download=1`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-[11px] px-1.5 py-0.5 rounded border border-black/10 text-gray-600 hover:bg-gray-100"
+                              title="Download"
+                            >
+                              Download
+                            </a>
+                          </div>
                         ) : (
                           <span className="text-[11px] text-gray-400">-</span>
                         )}

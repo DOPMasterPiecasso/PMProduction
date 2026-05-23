@@ -78,6 +78,7 @@ export default function TeamPage() {
       });
       if (!res.ok) throw new Error();
       toast.success('Target KPI disimpan');
+      fetchData();
     } catch { toast.error('Gagal menyimpan target'); }
   }
 
@@ -186,6 +187,7 @@ export default function TeamPage() {
                     <td className="px-4 py-3 font-mono text-green-600 font-semibold">{d.deals}</td>
                     <td className="px-4 py-3">
                       <input
+                        id={`td-${d.id}`}
                         type="number"
                         defaultValue={d.targetDeals}
                         className="w-[60px] text-[11px] border border-black/10 rounded-md px-2 py-1 font-mono focus:outline-none focus:border-blue-400"
@@ -198,6 +200,7 @@ export default function TeamPage() {
                     <td className="px-4 py-3 font-mono font-medium">{formatRpShort(d.rev)}</td>
                     <td className="px-4 py-3">
                       <input
+                        id={`tr-${d.id}`}
                         type="text"
                         defaultValue={`Rp ${d.targetRevenue.toLocaleString('id-ID')}`}
                         className="w-[100px] text-[11px] border border-black/10 rounded-md px-2 py-1 font-mono focus:outline-none focus:border-blue-400"
@@ -208,7 +211,7 @@ export default function TeamPage() {
                         }}
                       />
                     </td>
-                    <td className="px-4 py-3 font-mono">{d.act}</td>
+                    <td className={`px-4 py-3 font-mono ${d.act < 10 ? 'text-red-600 font-semibold' : ''}`}>{d.act}</td>
                     <td className="px-4 py-3 font-mono">{d.fu}</td>
                     <td className="px-4 py-3 font-mono">
                       <span className={d.ov > 0 ? 'text-amber-600' : 'text-green-600'}>{d.ov}</span>
@@ -216,7 +219,14 @@ export default function TeamPage() {
                     <td className="px-4 py-3">{statusBadge(d.status)}</td>
                     <td className="px-4 py-3">
                       <button
-                        onClick={() => { toast.success(`KPI ${d.name} disimpan`); }}
+                        onClick={() => {
+                          const dealsInput = document.getElementById(`td-${d.id}`) as HTMLInputElement;
+                          const revInput = document.getElementById(`tr-${d.id}`) as HTMLInputElement;
+                          const targetDeals = parseInt(dealsInput?.value || '0');
+                          const clean = (revInput?.value || '').replace(/[^0-9]/g, '');
+                          const targetRevenue = parseInt(clean) || 0;
+                          saveTarget(d.id, targetDeals, targetRevenue);
+                        }}
                         className="text-[10.5px] px-3 py-1 rounded-md border border-black/10 text-gray-600 hover:bg-gray-100"
                       >
                         Simpan
