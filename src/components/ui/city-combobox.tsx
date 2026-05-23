@@ -98,12 +98,12 @@ export function CityCombobox({
                     "data-disabled:pointer-events-none data-disabled:opacity-50"
                   )}
                 >
-                  <Combobox.ItemText className="flex flex-1 flex-col">
+                  <div className="flex flex-1 flex-col">
                     <span>{city.nama}</span>
                     {city.provinsi && (
                       <span className="text-[10px] text-gray-400">{city.provinsi}</span>
                     )}
-                  </Combobox.ItemText>
+                  </div>
                   <Combobox.ItemIndicator
                     render={
                       <span className="pointer-events-none absolute right-2 flex size-4 items-center justify-center">
