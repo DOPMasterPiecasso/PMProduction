@@ -38,7 +38,7 @@ export async function GET() {
 
 export async function PATCH(req: Request) {
   try {
-    const { dealId, stageId, dealStatus, notes, namaProject } = await req.json();
+    const { dealId, stageId, dealStatus, notes, namaProject, assignedAeId, serviceId, nilai, probability, isHot } = await req.json();
     if (!dealId || !stageId) {
       return NextResponse.json({ error: 'dealId dan stageId wajib diisi' }, { status: 400 });
     }
@@ -53,9 +53,13 @@ export async function PATCH(req: Request) {
       data: {
         stageId,
         dealStatus: newStatus,
-        probability: newStatus === 'archived' || newStatus === 'unqualified' ? undefined : stage.probabilityDefault,
+        probability: probability !== undefined ? Number(probability) : (newStatus === 'archived' || newStatus === 'unqualified' ? undefined : stage.probabilityDefault),
         notes: notes ?? undefined,
         namaProject: namaProject ?? undefined,
+        assignedAeId: assignedAeId ?? undefined,
+        serviceId: serviceId ?? undefined,
+        nilai: nilai !== undefined ? Number(nilai) : undefined,
+        isHot: isHot !== undefined ? Boolean(isHot) : undefined,
       },
     });
 

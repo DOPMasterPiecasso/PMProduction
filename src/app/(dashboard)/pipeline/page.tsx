@@ -331,9 +331,16 @@ function DealModal({
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [aeList, setAeList] = useState<{ id: string; nama: string }[]>([]);
+
+  useEffect(() => {
+    fetch('/api/pipeline/meta')
+      .then((r) => r.json())
+      .then((data) => setAeList(data.aes || []))
+      .catch(() => {});
+  }, []);
 
   async function handleUpdate() {
-    setSaving(true);
     try {
       const body: Record<string, unknown> = { dealId: deal.id, stageId: selectedStageId, notes: catatan };
       if (showEdit) {
@@ -485,6 +492,15 @@ function DealModal({
               <div>
                 <label className="text-[10.5px] font-medium text-gray-600 block mb-1">Nama Project</label>
                 <input type="text" value={editForm.namaProject} onChange={(e) => setEditForm((f) => ({ ...f, namaProject: e.target.value }))} className={inputCls} placeholder="Yearbook 2026/27" />
+              </div>
+              <div>
+                <label className="text-[10.5px] font-medium text-gray-600 block mb-1">Assign AE</label>
+                <select value={editForm.assignedAeId} onChange={(e) => setEditForm((f) => ({ ...f, assignedAeId: e.target.value }))} className={inputCls}>
+                  <option value="">Pilih AE</option>
+                  {aeList.map((ae) => (
+                    <option key={ae.id} value={ae.id}>{ae.nama}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="text-[10.5px] font-medium text-gray-600 block mb-1">Status Deal</label>
