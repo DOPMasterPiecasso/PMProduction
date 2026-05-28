@@ -32,12 +32,12 @@ export async function GET(req: Request) {
 
     const now = new Date();
     const teamData = await Promise.all(users.map(async (user: { id: string; nama: string; email: string; password: string; role: string; avatarInitial: string | null; avatarColor: string | null; isActive: boolean; createdAt: Date; updatedAt: Date }) => {
-      // Deals won this month
+      // Deals won this month (berdasarkan updatedAt karena dealStatus berubah jadi 'won')
       const dealsThisMonth = await prisma.deal.findMany({
         where: {
           assignedAeId: user.id,
           dealStatus: 'won',
-          tanggalMasuk: { gte: monthStart, lt: monthEnd },
+          updatedAt: { gte: monthStart, lt: monthEnd },
         },
       });
       const dealsActual = dealsThisMonth.length;
