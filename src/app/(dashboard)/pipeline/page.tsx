@@ -666,7 +666,7 @@ function DealModal({
               disabled={saving}
               className="px-4 py-2 text-[12px] font-medium rounded-lg bg-[#18181B] text-white hover:bg-[#27272A] transition-colors disabled:opacity-60"
             >
-              {saving ? 'Menyimpan...' : 'Update Deal'}
+              {saving ? 'Menyimpan...' : 'Simpan'}
             </button>
           </div>
         </div>
