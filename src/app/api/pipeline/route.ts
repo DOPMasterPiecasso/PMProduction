@@ -53,7 +53,7 @@ export async function PATCH(req: Request) {
       data: {
         stageId,
         dealStatus: newStatus,
-        probability: newStatus === 'archived' ? undefined : stage.probabilityDefault,
+        probability: newStatus === 'archived' || newStatus === 'unqualified' ? undefined : stage.probabilityDefault,
         notes: notes ?? undefined,
         namaProject: namaProject ?? undefined,
       },

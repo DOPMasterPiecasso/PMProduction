@@ -317,7 +317,9 @@ function DealModal({
   const [uploading, setUploading] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [confirmArchive, setConfirmArchive] = useState(false);
+  const [confirmUnqualified, setConfirmUnqualified] = useState(false);
   const [archiving, setArchiving] = useState(false);
+  const [unqualifying, setUnqualifying] = useState(false);
   const [editForm, setEditForm] = useState({
     serviceId: deal.service?.id || '',
     nilai: String(deal.nilai),
@@ -374,6 +376,7 @@ function DealModal({
   }
 
   const isArchived = deal.dealStatus === 'archived';
+  const isUnqualified = deal.dealStatus === 'unqualified';
 
   async function handleArchive() {
     setArchiving(true);
@@ -393,6 +396,26 @@ function DealModal({
     } finally {
       setSaving(false);
       setUploading(false);
+    }
+  }
+
+  async function handleUnqualified() {
+    setUnqualifying(true);
+    try {
+      const newStatus = isUnqualified ? 'active' : 'unqualified';
+      const res = await fetch('/api/pipeline', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dealId: deal.id, stageId: deal.stageId, dealStatus: newStatus }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success(isUnqualified ? 'Deal dikembalikan' : 'Deal ditandai unqualified');
+      onUpdated();
+      onClose();
+    } catch {
+      toast.error(isUnqualified ? 'Gagal mengembalikan deal' : 'Gagal menandai unqualified');
+    } finally {
+      setUnqualifying(false);
     }
   }
 
@@ -469,6 +492,7 @@ function DealModal({
                   <option value="active">Active</option>
                   <option value="won">Deal</option>
                   <option value="lost">Lost</option>
+                  <option value="unqualified">Unqualified</option>
                 </select>
               </div>
               <div className="flex items-center gap-2">
@@ -562,7 +586,32 @@ function DealModal({
 
         {/* Footer */}
         <div className="px-5 py-3 border-t border-black/[0.06] flex items-center justify-between gap-2">
-          <div>
+          <div className="flex items-center gap-2">
+            {!confirmUnqualified ? (
+              <button
+                onClick={() => setConfirmUnqualified(true)}
+                className={`px-3 py-2 text-[11.5px] font-medium rounded-lg border transition-colors ${isUnqualified ? 'border-gray-200 text-gray-500 hover:bg-gray-50' : 'border-amber-200 text-amber-600 hover:bg-amber-50'}`}
+              >
+                {isUnqualified ? 'Kembalikan' : 'Unqualified'}
+              </button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="text-[11.5px] text-amber-600">{isUnqualified ? 'Kembalikan deal ini?' : 'Tandai unqualified?'}</span>
+                <button
+                  onClick={handleUnqualified}
+                  disabled={unqualifying}
+                  className={`px-3 py-1.5 text-[11px] font-medium rounded-lg text-white disabled:opacity-60 ${isUnqualified ? 'bg-gray-500 hover:bg-gray-600' : 'bg-amber-500 hover:bg-amber-600'}`}
+                >
+                  {unqualifying ? '...' : isUnqualified ? 'Ya, Kembalikan' : 'Ya, Unqualified'}
+                </button>
+                <button
+                  onClick={() => setConfirmUnqualified(false)}
+                  className="px-3 py-1.5 text-[11px] font-medium rounded-lg border border-black/[0.1] text-gray-500 hover:bg-gray-50"
+                >
+                  Batal
+                </button>
+              </div>
+            )}
             {!confirmArchive ? (
               <button
                 onClick={() => setConfirmArchive(true)}
@@ -627,6 +676,7 @@ function DealCard({
   onClick: () => void;
 }) {
   const svcHex = deal.service?.colorHex ?? '#94A3B8';
+  const isUnqualifiedCard = deal.dealStatus === 'unqualified';
 
   return (
     <div
@@ -640,10 +690,12 @@ function DealCard({
         deal.isHot ? 'border-[#F97316]/40 shadow-[0_0_0_1px_rgba(249,115,22,0.12)]' : 'border-black/[0.07] shadow-sm',
         isWon ? 'border-[#16A34A]/25 bg-[#F0FDF4]/40' : '',
         isLost ? 'border-gray-200 bg-gray-50/60 opacity-70' : '',
+        isUnqualifiedCard ? 'border-amber-200 bg-amber-50/40 opacity-80' : '',
       ].join(' ')}
       style={{ padding: '9px 10px' }}
     >
       {deal.isHot && <div className="text-[9px] font-semibold text-[#EA580C] mb-1">🔥 Hot</div>}
+      {isUnqualifiedCard && <div className="text-[9px] font-semibold text-amber-600 mb-1">✕ Unqualified</div>}
       <div className="text-[12px] font-semibold text-[#18181B] leading-tight truncate">{deal.client.namaKlien}</div>
       {deal.namaProject && <div className="text-[10px] text-gray-500 truncate">{deal.namaProject}</div>}
       {deal.service && (
@@ -693,6 +745,7 @@ export default function PipelinePage() {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [showUnqualified, setShowUnqualified] = useState(false);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [showAddDeal, setShowAddDeal] = useState(false);
 
@@ -754,15 +807,15 @@ export default function PipelinePage() {
     setDraggingId(null);
   }
 
-  const activeDeals = deals.filter((d) => d.dealStatus !== 'archived');
+  const activeDeals = deals.filter((d) => d.dealStatus !== 'archived' && d.dealStatus !== 'unqualified');
   const totalPipeline = activeDeals.filter((d) => d.dealStatus === 'active').reduce((s, d) => s + d.nilai, 0);
   const totalWeighted = activeDeals.reduce((s, d) => s + d.nilai * (d.probability / 100), 0);
   const wonTotal = activeDeals.filter((d) => d.dealStatus === 'won').reduce((s, d) => s + d.nilai, 0);
 
   const filteredDeals = deals.filter((d) => {
-    if (!showArchived && d.dealStatus === 'archived') return false;
-    if (showArchived && d.dealStatus !== 'archived') return false;
-    return true;
+    if (showArchived) return d.dealStatus === 'archived';
+    if (showUnqualified) return d.dealStatus === 'unqualified';
+    return d.dealStatus !== 'archived' && d.dealStatus !== 'unqualified';
   });
   const totalPerStage: Record<string, { totalNilai: number; dealCount: number }> = {};
   for (const d of filteredDeals) {
@@ -849,12 +902,20 @@ export default function PipelinePage() {
         <div className="bg-white border border-black/[0.06] rounded-xl shadow-sm overflow-hidden">
           <div className="px-4 py-2.5 border-b border-black/[0.06] flex items-center gap-3">
             <button
-              onClick={() => setShowArchived(!showArchived)}
+              onClick={() => { setShowArchived(!showArchived); setShowUnqualified(false); }}
               className={`text-[11.5px] px-3 py-1 rounded-md font-medium transition-colors ${showArchived ? 'bg-[#18181B] text-white' : 'bg-[#F4F4F5] text-gray-500 hover:bg-gray-200'}`}
             >
               {showArchived ? 'Sembunyikan Archive' : 'Tampilkan Archived'}
             </button>
-            <span className="text-[11px] text-gray-400">{showArchived ? `${filteredDeals.length} archived` : `${activeDeals.length} deal aktif`}</span>
+            <button
+              onClick={() => { setShowUnqualified(!showUnqualified); setShowArchived(false); }}
+              className={`text-[11.5px] px-3 py-1 rounded-md font-medium transition-colors ${showUnqualified ? 'bg-[#DC2626] text-white' : 'bg-[#F4F4F5] text-gray-500 hover:bg-gray-200'}`}
+            >
+              {showUnqualified ? 'Sembunyikan Unqualified' : 'Tampilkan Unqualified'}
+            </button>
+            <span className="text-[11px] text-gray-400">
+              {showArchived ? `${filteredDeals.length} archived` : showUnqualified ? `${filteredDeals.length} unqualified` : `${activeDeals.length} deal aktif`}
+            </span>
           </div>
 
           <div className="overflow-auto" style={{ maxHeight: 'calc(100vh - 300px)' }}>
@@ -862,9 +923,9 @@ export default function PipelinePage() {
               {stages.map((stage) => {
                 const colDeals = deals.filter((d) => {
                   if (d.stageId !== stage.id) return false;
-                  if (!showArchived && d.dealStatus === 'archived') return false;
-                  if (showArchived && d.dealStatus !== 'archived') return false;
-                  return true;
+                  if (showArchived) return d.dealStatus === 'archived';
+                  if (showUnqualified) return d.dealStatus === 'unqualified';
+                  return d.dealStatus !== 'archived' && d.dealStatus !== 'unqualified';
                 });
                 const isLost = stage.nama === 'Lost';
                 const isWon = stage.nama === 'Won';

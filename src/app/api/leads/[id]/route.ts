@@ -26,6 +26,32 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       },
     });
 
+    // Auto-create deal when lead is qualified
+    if (status === 'qualified' && lead.clientId) {
+      const existingDeal = await prisma.deal.findFirst({
+        where: { clientId: lead.clientId, dealStatus: { notIn: ['archived', 'won'] } },
+      });
+      if (!existingDeal) {
+        const firstStage = await prisma.pipelineStage.findFirst({
+          where: { isTerminal: false },
+          orderBy: { urutan: 'asc' },
+        });
+        if (firstStage) {
+          await prisma.deal.create({
+            data: {
+              clientId: lead.clientId,
+              serviceId: lead.serviceId,
+              assignedAeId: lead.assignedToId,
+              stageId: firstStage.id,
+              probability: firstStage.probabilityDefault,
+              namaProject: lead.namaInstitusi,
+              notes: `Auto dari lead: ${lead.namaInstitusi}`,
+            },
+          });
+        }
+      }
+    }
+
     return NextResponse.json({ lead });
   } catch (error: unknown) {
     console.error('[LEAD PATCH]', error);

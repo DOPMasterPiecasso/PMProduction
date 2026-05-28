@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Search, Plus, MoreHorizontal, Loader2, Trash2, Pencil } from 'lucide-react';
+import { Search, Plus, MoreHorizontal, Loader2, Trash2, Pencil, X, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,10 +35,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ClientCombobox } from '@/components/ui/client-combobox';
 
 interface Source { id: string; nama: string }
 interface Service { id: string; nama: string; colorHex: string }
 interface User { id: string; nama: string; avatarInitial: string | null }
+interface ClientItem { id: string; namaKlien: string; namaContact: string | null; noHp: string | null; email: string | null; sourceId: string | null; serviceId: string | null }
 
 interface Lead {
   id: string;
@@ -62,6 +64,7 @@ interface LeadForm {
   assignedToId: string;
   status: string;
   catatan: string;
+  clientId: string;
 }
 
 const emptyForm: LeadForm = {
@@ -73,6 +76,7 @@ const emptyForm: LeadForm = {
   assignedToId: '',
   status: 'baru',
   catatan: '',
+  clientId: '',
 };
 
 const statusColors: Record<string, string> = {
@@ -110,9 +114,12 @@ function LeadDialog({
   sources,
   services,
   users,
+  clients,
   saving,
   onSubmit,
   title,
+  onClientSelect,
+  onAddClient,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -121,9 +128,12 @@ function LeadDialog({
   sources: Source[];
   services: Service[];
   users: User[];
+  clients: ClientItem[];
   saving: boolean;
   onSubmit: () => void;
   title: string;
+  onClientSelect: (client: ClientItem | null) => void;
+  onAddClient: () => void;
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -134,11 +144,26 @@ function LeadDialog({
         <div className="flex flex-col gap-3">
           <div>
             <label className="text-[11.5px] font-medium text-gray-500 mb-1 block">Nama Institusi *</label>
-            <Input
-              value={form.namaInstitusi}
-              onChange={(e) => setForm({ ...form, namaInstitusi: e.target.value })}
-              placeholder="cth: SMA Harapan Bangsa"
-            />
+            <div className="flex gap-2">
+              <ClientCombobox
+                clients={clients}
+                selectedClientId={form.clientId}
+                onClientSelect={onClientSelect}
+                onInputChange={(val) => setForm({ ...form, namaInstitusi: val, clientId: '' })}
+                placeholder="Cari atau ketik nama institusi..."
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={onAddClient}
+                className="h-9 w-9 shrink-0"
+                title="Tambah client baru"
+              >
+                <UserPlus className="size-4" />
+              </Button>
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -246,13 +271,17 @@ function LeadDialog({
 
 export default function LeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
-  const [meta, setMeta] = useState<{ sources: Source[]; services: Service[]; users: User[] }>({ sources: [], services: [], users: [] });
+  const [meta, setMeta] = useState<{ sources: Source[]; services: Service[]; users: User[]; clients: ClientItem[] }>({ sources: [], services: [], users: [], clients: [] });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [form, setForm] = useState<LeadForm>(emptyForm);
   const [editId, setEditId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  const [clientDialogOpen, setClientDialogOpen] = useState(false);
+  const [clientForm, setClientForm] = useState({ namaKlien: '', namaContact: '', noHp: '', email: '', sourceId: '', serviceId: '' });
+  const [clientSaving, setClientSaving] = useState(false);
 
   const fetchLeads = useCallback(async () => {
     try {
@@ -280,6 +309,69 @@ export default function LeadsPage() {
     setDialogOpen(true);
   };
 
+  const handleClientSelect = (client: ClientItem | null) => {
+    if (client) {
+      setForm({
+        ...form,
+        clientId: client.id,
+        namaInstitusi: client.namaKlien,
+        namaContact: client.namaContact || '',
+        noHp: client.noHp || '',
+        sourceId: client.sourceId || '',
+        serviceId: client.serviceId || '',
+      });
+    } else {
+      setForm({ ...form, clientId: '' });
+    }
+  };
+
+  const handleOpenAddClient = () => {
+    setClientForm({
+      namaKlien: form.namaInstitusi,
+      namaContact: form.namaContact,
+      noHp: form.noHp,
+      email: '',
+      sourceId: form.sourceId,
+      serviceId: form.serviceId,
+    });
+    setClientDialogOpen(true);
+  };
+
+  const handleCreateClient = async () => {
+    if (!clientForm.namaKlien.trim()) {
+      toast.error('Nama klien wajib diisi');
+      return;
+    }
+    setClientSaving(true);
+    try {
+      const res = await fetch('/api/clients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(clientForm),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      const c = data.client;
+      const newClient: ClientItem = {
+        id: c.id,
+        namaKlien: c.namaKlien,
+        namaContact: c.namaContact,
+        noHp: c.noHp,
+        email: c.email,
+        sourceId: c.sourceId,
+        serviceId: c.serviceId,
+      };
+      setClientDialogOpen(false);
+      setMeta((prev) => ({ ...prev, clients: [...prev.clients, newClient] }));
+      handleClientSelect(newClient);
+      toast.success('Client berhasil dibuat');
+    } catch {
+      toast.error('Gagal membuat client');
+    } finally {
+      setClientSaving(false);
+    }
+  };
+
   const openEdit = (lead: Lead) => {
     setEditId(lead.id);
     setForm({
@@ -291,6 +383,7 @@ export default function LeadsPage() {
       assignedToId: lead.assignedTo?.id || '',
       status: lead.status,
       catatan: lead.catatan || '',
+      clientId: '',
     });
     setDialogOpen(true);
   };
@@ -471,10 +564,64 @@ export default function LeadsPage() {
         sources={meta.sources}
         services={meta.services}
         users={meta.users}
+        clients={meta.clients}
         saving={saving}
         onSubmit={handleSubmit}
         title={editId ? 'Edit Lead' : 'Tambah Lead Manual'}
+        onClientSelect={handleClientSelect}
+        onAddClient={handleOpenAddClient}
       />
+
+      <Dialog open={clientDialogOpen} onOpenChange={setClientDialogOpen}>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle>Tambah Client Baru</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-3">
+            <div>
+              <label className="text-[11.5px] font-medium text-gray-500 mb-1 block">Nama Klien *</label>
+              <Input
+                value={clientForm.namaKlien}
+                onChange={(e) => setClientForm({ ...clientForm, namaKlien: e.target.value })}
+                placeholder="cth: SMA Harapan Bangsa"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[11.5px] font-medium text-gray-500 mb-1 block">Nama Contact</label>
+                <Input
+                  value={clientForm.namaContact}
+                  onChange={(e) => setClientForm({ ...clientForm, namaContact: e.target.value })}
+                  placeholder="cth: Pak Ahmad"
+                />
+              </div>
+              <div>
+                <label className="text-[11.5px] font-medium text-gray-500 mb-1 block">No. HP</label>
+                <Input
+                  value={clientForm.noHp}
+                  onChange={(e) => setClientForm({ ...clientForm, noHp: e.target.value })}
+                  placeholder="0812xxxx"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-[11.5px] font-medium text-gray-500 mb-1 block">Email</label>
+              <Input
+                value={clientForm.email}
+                onChange={(e) => setClientForm({ ...clientForm, email: e.target.value })}
+                placeholder="cth: sekolah@email.com"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 mt-2">
+            <DialogClose render={<Button variant="outline" disabled={clientSaving}>Batal</Button>} />
+            <Button onClick={handleCreateClient} disabled={clientSaving}>
+              {clientSaving && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
+              Simpan
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
