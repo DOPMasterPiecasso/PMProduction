@@ -57,6 +57,8 @@ interface Lead {
 
 interface LeadForm {
   namaInstitusi: string;
+  namaContact: string;
+  noHp: string;
   sourceId: string;
   serviceId: string;
   assignedToId: string;
@@ -67,6 +69,8 @@ interface LeadForm {
 
 const emptyForm: LeadForm = {
   namaInstitusi: '',
+  namaContact: '',
+  noHp: '',
   sourceId: '',
   serviceId: '',
   assignedToId: '',
@@ -161,7 +165,24 @@ function LeadDialog({
               </Button>
             </div>
           </div>
-
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[11.5px] font-medium text-gray-500 mb-1 block">Nama Contact</label>
+              <Input
+                value={form.namaContact}
+                onChange={(e) => setForm({ ...form, namaContact: e.target.value })}
+                placeholder="cth: Pak Ahmad"
+              />
+            </div>
+            <div>
+              <label className="text-[11.5px] font-medium text-gray-500 mb-1 block">No. HP</label>
+              <Input
+                value={form.noHp}
+                onChange={(e) => setForm({ ...form, noHp: e.target.value })}
+                placeholder="0812xxxx"
+              />
+            </div>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-[11.5px] font-medium text-gray-500 mb-1 block">Sumber</label>
@@ -294,6 +315,8 @@ export default function LeadsPage() {
         ...form,
         clientId: client.id,
         namaInstitusi: client.namaKlien,
+        namaContact: client.namaContact || '',
+        noHp: client.noHp || '',
         sourceId: client.sourceId || '',
         serviceId: client.serviceId || '',
       });
@@ -305,8 +328,8 @@ export default function LeadsPage() {
   const handleOpenAddClient = () => {
     setClientForm({
       namaKlien: form.namaInstitusi,
-      namaContact: '',
-      noHp: '',
+      namaContact: form.namaContact,
+      noHp: form.noHp,
       email: '',
       sourceId: form.sourceId,
       serviceId: form.serviceId,
@@ -353,6 +376,8 @@ export default function LeadsPage() {
     setEditId(lead.id);
     setForm({
       namaInstitusi: lead.namaInstitusi,
+      namaContact: lead.namaContact || '',
+      noHp: lead.noHp || '',
       sourceId: lead.source?.id || '',
       serviceId: lead.service?.id || '',
       assignedToId: lead.assignedTo?.id || '',
@@ -561,8 +586,8 @@ export default function LeadsPage() {
                 placeholder="cth: SMA Harapan Bangsa"
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
                 <label className="text-[11.5px] font-medium text-gray-500 mb-1 block">Nama Contact</label>
                 <Input
                   value={clientForm.namaContact}

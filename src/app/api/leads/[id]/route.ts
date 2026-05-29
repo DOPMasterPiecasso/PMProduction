@@ -5,12 +5,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   try {
     const { id } = await params;
     const body = await req.json();
-    const { namaInstitusi, sourceId, serviceId, assignedToId, status, catatan } = body;
+    const { namaInstitusi, namaContact, noHp, sourceId, serviceId, assignedToId, status, catatan } = body;
 
     const lead = await prisma.lead.update({
       where: { id },
       data: {
         namaInstitusi: namaInstitusi?.trim() || undefined,
+        namaContact: namaContact ?? undefined,
+        noHp: noHp ?? undefined,
         sourceId: sourceId || null,
         serviceId: serviceId || null,
         assignedToId: assignedToId || null,
