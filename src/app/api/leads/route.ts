@@ -43,7 +43,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { namaInstitusi, namaContact, noHp, sourceId, serviceId, assignedToId, status, catatan, clientId } = body;
+    const { namaInstitusi, sourceId, serviceId, assignedToId, status, catatan, clientId } = body;
 
     if (!namaInstitusi?.trim()) {
       return NextResponse.json({ error: 'Nama institusi wajib diisi' }, { status: 400 });
@@ -56,8 +56,6 @@ export async function POST(req: Request) {
       const newClient = await prisma.client.create({
         data: {
           namaKlien: namaInstitusi.trim(),
-          namaContact: namaContact || null,
-          noHp: noHp || null,
           sourceId: sourceId || null,
           serviceId: serviceId || null,
           status: 'unqualified',
@@ -66,11 +64,17 @@ export async function POST(req: Request) {
       linkedClientId = newClient.id;
     }
 
+    // Ambil data contact dari table client
+    const client = await prisma.client.findUnique({
+      where: { id: linkedClientId },
+      select: { namaContact: true, noHp: true },
+    });
+
     const lead = await prisma.lead.create({
       data: {
         namaInstitusi: namaInstitusi.trim(),
-        namaContact: namaContact || null,
-        noHp: noHp || null,
+        namaContact: client?.namaContact || null,
+        noHp: client?.noHp || null,
         sourceId: sourceId || null,
         serviceId: serviceId || null,
         assignedToId: assignedToId || null,
