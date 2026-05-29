@@ -22,8 +22,8 @@ export default function SettingsPage() {
   const [systemSettings, setSystemSettings] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
 
-  const [editingUser, setEditingUser] = useState<string | null>(null);
-  const [editUserData, setEditUserData] = useState<{ nama: string; email: string; role: string }>({ nama: '', email: '', role: '' });
+  const [editUserTarget, setEditUserTarget] = useState<User | null>(null);
+  const [editUserData, setEditUserData] = useState<{ nama: string; email: string; role: string; password: string }>({ nama: '', email: '', role: '', password: '' });
 
   const [editingService, setEditingService] = useState<string | null>(null);
   const [editSvcData, setEditSvcData] = useState<{ nama: string; deskripsi: string }>({ nama: '', deskripsi: '' });
@@ -40,6 +40,13 @@ export default function SettingsPage() {
 
   const [activityTypes, setActivityTypes] = useState<ActivityTypeItem[]>([]);
   const [cities, setCities] = useState<CityItem[]>([]);
+
+  const [userPage, setUserPage] = useState(0);
+  const [servicePage, setServicePage] = useState(0);
+  const [sourcePage, setSourcePage] = useState(0);
+  const [typePage, setTypePage] = useState(0);
+  const [cityPage, setCityPage] = useState(0);
+  const PER_PAGE = 5;
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -59,17 +66,30 @@ export default function SettingsPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  useEffect(() => { setUserPage(0); }, [users.length]);
+  useEffect(() => { setServicePage(0); }, [services.length]);
+  useEffect(() => { setSourcePage(0); }, [sources.length]);
+  useEffect(() => { setTypePage(0); }, [activityTypes.length]);
+  useEffect(() => { setCityPage(0); }, [cities.length]);
+
   // ─── User CRUD ──────────────────────────────────────────────
-  async function handleUpdateUser(id: string) {
+  async function handleUpdateUser() {
+    if (!editUserTarget) return;
+    const body: Record<string, unknown> = {
+      nama: editUserData.nama,
+      email: editUserData.email,
+      role: editUserData.role,
+    };
+    if (editUserData.password) body.password = editUserData.password;
     try {
-      const res = await fetch(`/api/settings/users/${id}`, {
+      const res = await fetch(`/api/settings/users/${editUserTarget.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editUserData),
+        body: JSON.stringify(body),
       });
       if (!res.ok) { const d = await res.json(); toast.error(d.error); return; }
       toast.success('User diperbarui');
-      setEditingUser(null);
+      setEditUserTarget(null);
       fetchData();
     } catch { toast.error('Gagal mengupdate user'); }
   }
@@ -438,37 +458,18 @@ export default function SettingsPage() {
                 </tr>
               </thead>
               <tbody>
-                {users.map((u) => {
+                {users.slice(userPage * PER_PAGE, (userPage + 1) * PER_PAGE).map((u) => {
                   const isOwner = u.role === 'owner';
-                  const isEditing = editingUser === u.id;
                   return (
                     <tr key={u.id} className="border-b border-black/5 hover:bg-gray-50/50">
                       <td className="px-3 py-2.5">
-                        {isEditing ? (
-                          <div className="flex flex-col gap-1">
-                            <input value={editUserData.nama} onChange={(e) => setEditUserData({ ...editUserData, nama: e.target.value })} className="text-[12px] border border-black/10 rounded-md px-2 py-1 w-[130px] focus:outline-none focus:border-blue-400" />
-                            <input value={editUserData.email} onChange={(e) => setEditUserData({ ...editUserData, email: e.target.value })} className="text-[10.5px] border border-black/10 rounded-md px-2 py-1 w-[140px] focus:outline-none focus:border-blue-400" />
-                          </div>
-                        ) : (
-                          <>
-                            <div className="text-[12.5px] font-medium">{u.nama}</div>
-                            <div className="text-[10.5px] text-gray-400">{u.email}</div>
-                          </>
-                        )}
+                        <div className="text-[12.5px] font-medium">{u.nama}</div>
+                        <div className="text-[10.5px] text-gray-400">{u.email}</div>
                       </td>
                       <td className="px-3 py-2.5">
-                        {isEditing ? (
-                          <select value={editUserData.role} onChange={(e) => setEditUserData({ ...editUserData, role: e.target.value })} className="text-[11px] border border-black/10 rounded-md px-2 py-1 bg-white focus:outline-none">
-                            <option value="ae">AE (Account Executive)</option>
-                            <option value="manager">Manager</option>
-                            <option value="editor">Editor</option>
-                            <option value="admin">Admin</option>
-                          </select>
-                        ) : (
-                          <span className={`inline-flex text-[10.5px] font-medium px-2 py-0.5 rounded-full ${isOwner ? 'bg-purple-100 text-purple-700' : u.role === 'manager' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
-                            {ROLE_LABELS[u.role] || u.role}
-                          </span>
-                        )}
+                        <span className={`inline-flex text-[10.5px] font-medium px-2 py-0.5 rounded-full ${isOwner ? 'bg-purple-100 text-purple-700' : u.role === 'manager' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
+                          {ROLE_LABELS[u.role] || u.role}
+                        </span>
                       </td>
                       <td className="px-3 py-2.5">
                         <span className="inline-flex text-[10.5px] font-medium bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Aktif</span>
@@ -476,14 +477,11 @@ export default function SettingsPage() {
                       <td className="px-3 py-2.5">
                         {isOwner ? (
                           <span className="text-[10.5px] text-gray-400 italic">Owner tidak dapat dihapus</span>
-                        ) : isEditing ? (
-                          <div className="flex gap-1">
-                            <button onClick={() => handleUpdateUser(u.id)} className="text-[10.5px] px-2 py-1 rounded-md border border-black/10 hover:bg-gray-100">Simpan</button>
-                            <button onClick={() => handleDeleteUser(u.id, u.nama)} className="text-[10.5px] px-2 py-1 rounded-md border border-red-200 text-red-600 hover:bg-red-50">Hapus</button>
-                            <button onClick={() => setEditingUser(null)} className="text-[10.5px] px-2 py-1 text-gray-400 hover:text-gray-600">Batal</button>
-                          </div>
                         ) : (
-                          <button onClick={() => { setEditingUser(u.id); setEditUserData({ nama: u.nama, email: u.email, role: u.role }); }} className="text-[10.5px] px-2.5 py-1 rounded-md border border-black/10 hover:bg-gray-100">Edit</button>
+                          <div className="flex gap-1">
+                            <button onClick={() => { setEditUserTarget(u); setEditUserData({ nama: u.nama, email: u.email, role: u.role, password: '' }); }} className="text-[10.5px] px-2.5 py-1 rounded-md border border-black/10 hover:bg-gray-100">Edit</button>
+                            <button onClick={() => handleDeleteUser(u.id, u.nama)} className="text-[10.5px] px-2.5 py-1 rounded-md border border-red-200 text-red-600 hover:bg-red-50">Hapus</button>
+                          </div>
                         )}
                       </td>
                     </tr>
@@ -492,6 +490,15 @@ export default function SettingsPage() {
               </tbody>
             </table>
           </div>
+          {users.length > PER_PAGE && (
+            <div className="flex items-center justify-center gap-3 px-4 py-2 border-t border-black/5">
+              <span className="text-[11px] text-gray-400">{users.length} total</span>
+              <div className="flex gap-1">
+                <button disabled={userPage === 0} onClick={() => setUserPage(p => p - 1)} className="text-[11px] px-2 py-1 rounded-md border border-black/10 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed">Sebelumnya</button>
+                <button disabled={(userPage + 1) * PER_PAGE >= users.length} onClick={() => setUserPage(p => p + 1)} className="text-[11px] px-2 py-1 rounded-md border border-black/10 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed">Selanjutnya</button>
+              </div>
+            </div>
+          )}
           <div className="px-4 py-2.5 border-t border-black/5 text-[11px] text-gray-400">
             Login & autentikasi akan diintegrasikan saat sistem live. Saat ini role disimpan sebagai referensi.
           </div>
@@ -509,7 +516,7 @@ export default function SettingsPage() {
             </button>
           </div>
           <div className="flex flex-col">
-            {services.map((svc, idx) => {
+            {services.slice(servicePage * PER_PAGE, (servicePage + 1) * PER_PAGE).map((svc, idx) => {
               const isEditing = editingService === svc.id;
               const color = svc.colorHex || serviceColors[idx % serviceColors.length];
               return (
@@ -554,6 +561,15 @@ export default function SettingsPage() {
               );
             })}
           </div>
+          {services.length > PER_PAGE && (
+            <div className="flex items-center justify-center gap-3 px-4 py-2 border-t border-black/5">
+              <span className="text-[11px] text-gray-400">{services.length} total</span>
+              <div className="flex gap-1">
+                <button disabled={servicePage === 0} onClick={() => setServicePage(p => p - 1)} className="text-[11px] px-2 py-1 rounded-md border border-black/10 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed">Sebelumnya</button>
+                <button disabled={(servicePage + 1) * PER_PAGE >= services.length} onClick={() => setServicePage(p => p + 1)} className="text-[11px] px-2 py-1 rounded-md border border-black/10 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed">Selanjutnya</button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -572,7 +588,7 @@ export default function SettingsPage() {
             {sources.length === 0 ? (
               <div className="px-4 py-6 text-center text-[12px] text-gray-400">Belum ada sumber lead. Tambah sumber baru.</div>
             ) : (
-              sources.map((src) => {
+              sources.slice(sourcePage * PER_PAGE, (sourcePage + 1) * PER_PAGE).map((src) => {
                 const isEditing = editingSource === src.id;
                 return (
                   <div key={src.id} className="flex items-center gap-2.5 px-4 py-2.5 border-b border-black/5 last:border-b-0">
@@ -615,6 +631,15 @@ export default function SettingsPage() {
               })
             )}
           </div>
+          {sources.length > PER_PAGE && (
+            <div className="flex items-center justify-center gap-3 px-4 py-2 border-t border-black/5">
+              <span className="text-[11px] text-gray-400">{sources.length} total</span>
+              <div className="flex gap-1">
+                <button disabled={sourcePage === 0} onClick={() => setSourcePage(p => p - 1)} className="text-[11px] px-2 py-1 rounded-md border border-black/10 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed">Sebelumnya</button>
+                <button disabled={(sourcePage + 1) * PER_PAGE >= sources.length} onClick={() => setSourcePage(p => p + 1)} className="text-[11px] px-2 py-1 rounded-md border border-black/10 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed">Selanjutnya</button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ── Activity Type Management ──────────────────────────── */}
@@ -632,7 +657,7 @@ export default function SettingsPage() {
             {activityTypes.length === 0 ? (
               <div className="px-4 py-6 text-center text-[12px] text-gray-400">Belum ada tipe aktivitas.</div>
             ) : (
-              activityTypes.map((t, idx) => {
+              activityTypes.slice(typePage * PER_PAGE, (typePage + 1) * PER_PAGE).map((t, idx) => {
                 const isEditing = editingType === t.id;
                 const color = t.colorHex || typeColors[idx % typeColors.length];
                 return (
@@ -667,6 +692,15 @@ export default function SettingsPage() {
               })
             )}
           </div>
+          {activityTypes.length > PER_PAGE && (
+            <div className="flex items-center justify-center gap-3 px-4 py-2 border-t border-black/5">
+              <span className="text-[11px] text-gray-400">{activityTypes.length} total</span>
+              <div className="flex gap-1">
+                <button disabled={typePage === 0} onClick={() => setTypePage(p => p - 1)} className="text-[11px] px-2 py-1 rounded-md border border-black/10 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed">Sebelumnya</button>
+                <button disabled={(typePage + 1) * PER_PAGE >= activityTypes.length} onClick={() => setTypePage(p => p + 1)} className="text-[11px] px-2 py-1 rounded-md border border-black/10 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed">Selanjutnya</button>
+              </div>
+            </div>
+          )}
           {showAddType && (
             <div className="border-t border-black/5 px-4 py-3 flex items-center gap-2 bg-gray-50">
               <input value={newType.nama} onChange={(e) => setNewType({ ...newType, nama: e.target.value })}
@@ -723,7 +757,7 @@ export default function SettingsPage() {
                     </td>
                   </tr>
                 ) : (
-                  cities.map((c) => {
+                  cities.slice(cityPage * PER_PAGE, (cityPage + 1) * PER_PAGE).map((c) => {
                     const isEditing = editingCity === c.id;
                     return (
                       <tr key={c.id} className="border-b border-black/5 hover:bg-gray-50/50">
@@ -765,6 +799,15 @@ export default function SettingsPage() {
               </tbody>
             </table>
           </div>
+          {cities.length > PER_PAGE && (
+            <div className="flex items-center justify-center gap-3 px-4 py-2 border-t border-black/5 bg-gray-50/50">
+              <span className="text-[11px] text-gray-400">{cities.length} total</span>
+              <div className="flex gap-1">
+                <button disabled={cityPage === 0} onClick={() => setCityPage(p => p - 1)} className="text-[11px] px-2 py-1 rounded-md border border-black/10 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed">Sebelumnya</button>
+                <button disabled={(cityPage + 1) * PER_PAGE >= cities.length} onClick={() => setCityPage(p => p + 1)} className="text-[11px] px-2 py-1 rounded-md border border-black/10 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed">Selanjutnya</button>
+              </div>
+            </div>
+          )}
           {showAddCity && (
             <div className="border-t border-black/5 px-4 py-3 flex items-center gap-2 bg-gray-50">
               <input value={newCity.nama} onChange={(e) => setNewCity({ ...newCity, nama: e.target.value })}
@@ -1067,6 +1110,45 @@ export default function SettingsPage() {
             <div className="flex justify-end gap-2 px-5 py-4 border-t border-black/[0.07]">
               <button onClick={() => setShowAddUser(false)} className="text-[12px] px-4 py-2 rounded-lg border border-black/10 text-gray-600 hover:bg-gray-50">Batal</button>
               <button onClick={handleAddUser} className="bg-[#18181B] text-white text-[12px] px-4 py-2 rounded-lg font-medium hover:opacity-85">Tambah</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Edit User Modal ────────────────────────────────────── */}
+      {editUserTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget) setEditUserTarget(null); }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-black/[0.07]">
+              <span className="text-[14px] font-semibold">Edit Anggota Tim</span>
+              <button onClick={() => setEditUserTarget(null)} className="w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 text-[16px]">×</button>
+            </div>
+            <div className="px-5 py-4 flex flex-col gap-4">
+              <div>
+                <label className="text-[11.5px] font-medium text-gray-600 block mb-1">Nama Lengkap</label>
+                <input value={editUserData.nama} onChange={(e) => setEditUserData({ ...editUserData, nama: e.target.value })} className="w-full text-[12px] border border-black/10 rounded-lg px-3 py-2 focus:outline-none" placeholder="Nama anggota" />
+              </div>
+              <div>
+                <label className="text-[11.5px] font-medium text-gray-600 block mb-1">Email</label>
+                <input type="email" value={editUserData.email} onChange={(e) => setEditUserData({ ...editUserData, email: e.target.value })} className="w-full text-[12px] border border-black/10 rounded-lg px-3 py-2 focus:outline-none" placeholder="email@studio.id" />
+              </div>
+              <div>
+                <label className="text-[11.5px] font-medium text-gray-600 block mb-1">Role</label>
+                <select value={editUserData.role} onChange={(e) => setEditUserData({ ...editUserData, role: e.target.value })} className="w-full text-[12px] border border-black/10 rounded-lg px-3 py-2 bg-white focus:outline-none">
+                  <option value="ae">AE (Account Executive)</option>
+                  <option value="manager">Manager</option>
+                  <option value="editor">Editor</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-[11.5px] font-medium text-gray-600 block mb-1">Password <span className="text-gray-400 font-normal">(kosongi jika tidak diubah)</span></label>
+                <input type="password" value={editUserData.password} onChange={(e) => setEditUserData({ ...editUserData, password: e.target.value })} className="w-full text-[12px] border border-black/10 rounded-lg px-3 py-2 focus:outline-none" placeholder="Biarkan kosong jika tidak diubah" />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 px-5 py-4 border-t border-black/[0.07]">
+              <button onClick={() => setEditUserTarget(null)} className="text-[12px] px-4 py-2 rounded-lg border border-black/10 text-gray-600 hover:bg-gray-50">Batal</button>
+              <button onClick={handleUpdateUser} className="bg-[#18181B] text-white text-[12px] px-4 py-2 rounded-lg font-medium hover:opacity-85">Simpan</button>
             </div>
           </div>
         </div>
