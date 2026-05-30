@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Search, Plus, MoreHorizontal, Loader2, Trash2, Pencil, X, UserPlus } from 'lucide-react';
+import { Search, Plus, MoreHorizontal, Loader2, Trash2, Pencil, X, UserPlus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -171,7 +171,8 @@ function LeadDialog({
               <Input
                 value={form.namaContact}
                 onChange={(e) => setForm({ ...form, namaContact: e.target.value })}
-                placeholder="cth: Pak Ahmad"
+                placeholder="Preview data only"
+                disabled
               />
             </div>
             <div>
@@ -179,7 +180,8 @@ function LeadDialog({
               <Input
                 value={form.noHp}
                 onChange={(e) => setForm({ ...form, noHp: e.target.value })}
-                placeholder="0812xxxx"
+                placeholder="Preview data only"
+                disabled
               />
             </div>
           </div>
@@ -274,6 +276,8 @@ export default function LeadsPage() {
   const [meta, setMeta] = useState<{ sources: Source[]; services: Service[]; users: User[]; clients: ClientItem[] }>({ sources: [], services: [], users: [], clients: [] });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const perPage = 10;
   const [form, setForm] = useState<LeadForm>(emptyForm);
   const [editId, setEditId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -318,7 +322,6 @@ export default function LeadsPage() {
         namaContact: client.namaContact || '',
         noHp: client.noHp || '',
         sourceId: client.sourceId || '',
-        serviceId: client.serviceId || '',
       });
     } else {
       setForm({ ...form, clientId: '' });
@@ -422,6 +425,9 @@ export default function LeadsPage() {
     }
   };
 
+  const paginatedLeads = leads.slice((page - 1) * perPage, page * perPage);
+  const totalPages = Math.max(1, Math.ceil(leads.length / perPage));
+
   const stats = {
     total: leads.length,
     baru: leads.filter((l) => l.status === 'baru').length,
@@ -482,7 +488,7 @@ export default function LeadsPage() {
               placeholder="Cari nama klien, kontak..."
               className="pl-9 text-[12.5px] bg-gray-50/50"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             />
           </div>
         </div>
@@ -509,7 +515,7 @@ export default function LeadsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {leads.map((lead) => (
+              {paginatedLeads.map((lead) => (
                 <TableRow key={lead.id} className="cursor-pointer hover:bg-gray-50/50">
                   <TableCell>
                     <div className="font-medium text-[13px]">{lead.namaInstitusi}</div>
@@ -555,6 +561,38 @@ export default function LeadsPage() {
           </div>
         )}
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-1">
+          <button
+            onClick={() => setPage(Math.max(1, page - 1))}
+            disabled={page === 1}
+            className="h-8 w-8 flex items-center justify-center rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+          >
+            <ChevronLeft className="size-4" />
+          </button>
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+            <button
+              key={p}
+              onClick={() => setPage(p)}
+              className={`h-8 min-w-[32px] px-2 flex items-center justify-center rounded-md text-[12.5px] font-medium transition-colors ${
+                p === page
+                  ? 'bg-[#18181B] text-white'
+                  : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+              }`}
+            >
+              {p}
+            </button>
+          ))}
+          <button
+            onClick={() => setPage(Math.min(totalPages, page + 1))}
+            disabled={page === totalPages}
+            className="h-8 w-8 flex items-center justify-center rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+          >
+            <ChevronRight className="size-4" />
+          </button>
+        </div>
+      )}
 
       <LeadDialog
         open={dialogOpen}
