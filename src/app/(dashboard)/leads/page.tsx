@@ -276,6 +276,7 @@ export default function LeadsPage() {
   const [meta, setMeta] = useState<{ sources: Source[]; services: Service[]; users: User[]; clients: ClientItem[] }>({ sources: [], services: [], users: [], clients: [] });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [showUnqualified, setShowUnqualified] = useState(false);
   const [page, setPage] = useState(1);
   const perPage = 10;
   const [form, setForm] = useState<LeadForm>(emptyForm);
@@ -413,6 +414,22 @@ export default function LeadsPage() {
     }
   };
 
+  const handleMarkUnqualified = async (id: string) => {
+    if (!confirm('Tandai lead ini sebagai Unqualified?')) return;
+    try {
+      const res = await fetch(`/api/leads/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'unqualified' }),
+      });
+      if (!res.ok) throw new Error('Gagal menandai unqualified');
+      toast.success('Lead ditandai unqualified');
+      fetchLeads();
+    } catch {
+      toast.error('Gagal menandai unqualified');
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm('Yakin ingin menghapus lead ini?')) return;
     try {
@@ -425,8 +442,11 @@ export default function LeadsPage() {
     }
   };
 
-  const paginatedLeads = leads.slice((page - 1) * perPage, page * perPage);
-  const totalPages = Math.max(1, Math.ceil(leads.length / perPage));
+  const displayLeads = showUnqualified
+    ? leads.filter((l) => l.status === 'unqualified')
+    : leads.filter((l) => l.status !== 'unqualified');
+  const paginatedLeads = displayLeads.slice((page - 1) * perPage, page * perPage);
+  const totalPages = Math.max(1, Math.ceil(displayLeads.length / perPage));
 
   const stats = {
     total: leads.length,
@@ -491,6 +511,15 @@ export default function LeadsPage() {
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             />
           </div>
+          <button
+            onClick={() => { setShowUnqualified(!showUnqualified); setPage(1); }}
+            className={`text-[11.5px] px-3 py-1.5 rounded-md font-medium transition-colors shrink-0 ${showUnqualified ? 'bg-[#DC2626] text-white' : 'bg-[#F4F4F5] text-gray-500 hover:bg-gray-200'}`}
+          >
+            Unqualified
+          </button>
+          <span className="text-[11px] text-gray-400">
+            {showUnqualified ? `${displayLeads.length} unqualified` : `${displayLeads.length} lead`}
+          </span>
         </div>
 
         {loading ? (
@@ -541,10 +570,15 @@ export default function LeadsPage() {
                           </Button>
                         }
                       />
-                      <DropdownMenuContent align="end" className="w-36">
+                      <DropdownMenuContent align="end" className="w-40">
                         <DropdownMenuItem onClick={() => openEdit(lead)}>
                           <Pencil className="w-3.5 h-3.5 mr-2" />
                           Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handleMarkUnqualified(lead.id)}>
+                          <X className="w-3.5 h-3.5 mr-2" />
+                          Unqualified
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem variant="destructive" onClick={() => handleDelete(lead.id)}>

@@ -89,7 +89,7 @@ export async function POST(req: Request) {
     const leadStatus = status || 'baru';
     if (leadStatus === 'qualified' && linkedClientId) {
       const existingDeal = await prisma.deal.findFirst({
-        where: { clientId: linkedClientId, dealStatus: { notIn: ['archived', 'won'] } },
+        where: { clientId: linkedClientId, serviceId: serviceId || null, dealStatus: { notIn: ['archived', 'won'] } },
       });
       if (!existingDeal) {
         const firstStage = await prisma.pipelineStage.findFirst({

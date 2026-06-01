@@ -29,7 +29,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     // Auto-create deal when lead is qualified
     if (status === 'qualified' && lead.clientId) {
       const existingDeal = await prisma.deal.findFirst({
-        where: { clientId: lead.clientId, dealStatus: { notIn: ['archived', 'won'] } },
+        where: { clientId: lead.clientId, serviceId: lead.serviceId, dealStatus: { notIn: ['archived', 'won'] } },
       });
       if (!existingDeal) {
         const firstStage = await prisma.pipelineStage.findFirst({
