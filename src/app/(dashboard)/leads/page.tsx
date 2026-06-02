@@ -589,15 +589,19 @@ export default function LeadsPage() {
                           Edit
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => handleMarkQualified(lead.id)}>
-                          <Check className="w-3.5 h-3.5 mr-2" />
-                          Qualified
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleMarkUnqualified(lead.id)}>
-                          <X className="w-3.5 h-3.5 mr-2" />
-                          Unqualified
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
+                        {(lead.status === 'baru' || lead.status === 'dihubungi') && (
+                          <>
+                            <DropdownMenuItem onClick={() => handleMarkQualified(lead.id)}>
+                              <Check className="w-3.5 h-3.5 mr-2" />
+                              Qualified
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleMarkUnqualified(lead.id)}>
+                              <X className="w-3.5 h-3.5 mr-2" />
+                              Unqualified
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                          </>
+                        )}
                         <DropdownMenuItem variant="destructive" onClick={() => handleDelete(lead.id)}>
                           <Trash2 className="w-3.5 h-3.5 mr-2" />
                           Hapus
