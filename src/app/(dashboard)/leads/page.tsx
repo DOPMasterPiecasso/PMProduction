@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Search, Plus, MoreHorizontal, Loader2, Trash2, Pencil, X, UserPlus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Plus, MoreHorizontal, Loader2, Trash2, Pencil, X, Check, UserPlus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -431,6 +431,22 @@ export default function LeadsPage() {
     }
   };
 
+  const handleMarkQualified = async (id: string) => {
+    if (!confirm('Tandai lead ini sebagai Qualified?')) return;
+    try {
+      const res = await fetch(`/api/leads/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'qualified' }),
+      });
+      if (!res.ok) throw new Error('Gagal menandai qualified');
+      toast.success('Lead ditandai qualified dan masuk pipeline');
+      fetchLeads();
+    } catch {
+      toast.error('Gagal menandai qualified');
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm('Yakin ingin menghapus lead ini?')) return;
     try {
@@ -577,6 +593,10 @@ export default function LeadsPage() {
                           Edit
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handleMarkQualified(lead.id)}>
+                          <Check className="w-3.5 h-3.5 mr-2" />
+                          Qualified
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleMarkUnqualified(lead.id)}>
                           <X className="w-3.5 h-3.5 mr-2" />
                           Unqualified
