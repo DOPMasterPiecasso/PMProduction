@@ -45,7 +45,7 @@ export function ClientCombobox({
       }}
       onOpenChange={setOpen}
       onInputValueChange={(val, details) => {
-        if (details?.reason === 'inputChange') {
+        if (details?.reason === 'input-change') {
           onInputChange?.(val)
         }
       }}
