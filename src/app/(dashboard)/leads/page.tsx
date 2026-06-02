@@ -19,6 +19,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
 import {
@@ -289,6 +291,8 @@ export default function LeadsPage() {
   const [clientForm, setClientForm] = useState({ namaKlien: '', namaContact: '', noHp: '', email: '', sourceId: '', serviceId: '' });
   const [clientSaving, setClientSaving] = useState(false);
 
+  const [confirmAction, setConfirmAction] = useState<{ type: 'qualified' | 'unqualified' | 'delete'; id: string } | null>(null);
+
   const fetchLeads = useCallback(async () => {
     try {
       const params = new URLSearchParams();
@@ -415,47 +419,39 @@ export default function LeadsPage() {
     }
   };
 
-  const handleMarkUnqualified = async (id: string) => {
-    if (!confirm('Tandai lead ini sebagai Unqualified?')) return;
-    try {
-      const res = await fetch(`/api/leads/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'unqualified' }),
-      });
-      if (!res.ok) throw new Error('Gagal menandai unqualified');
-      toast.success('Lead ditandai unqualified');
-      fetchLeads();
-    } catch {
-      toast.error('Gagal menandai unqualified');
-    }
+  const handleMarkUnqualified = (id: string) => {
+    setConfirmAction({ type: 'unqualified', id });
   };
 
-  const handleMarkQualified = async (id: string) => {
-    if (!confirm('Tandai lead ini sebagai Qualified?')) return;
-    try {
-      const res = await fetch(`/api/leads/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'qualified' }),
-      });
-      if (!res.ok) throw new Error('Gagal menandai qualified');
-      toast.success('Lead ditandai qualified dan masuk pipeline');
-      fetchLeads();
-    } catch {
-      toast.error('Gagal menandai qualified');
-    }
+  const handleMarkQualified = (id: string) => {
+    setConfirmAction({ type: 'qualified', id });
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Yakin ingin menghapus lead ini?')) return;
+  const handleDelete = (id: string) => {
+    setConfirmAction({ type: 'delete', id });
+  };
+
+  const executeConfirm = async () => {
+    if (!confirmAction) return;
+    const { type, id } = confirmAction;
+    setConfirmAction(null);
+    const label = type === 'qualified' ? 'qualified' : type === 'unqualified' ? 'unqualified' : 'dihapus';
     try {
-      const res = await fetch(`/api/leads/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Gagal menghapus');
-      toast.success('Lead berhasil dihapus');
+      if (type === 'delete') {
+        const res = await fetch(`/api/leads/${id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Gagal menghapus');
+      } else {
+        const res = await fetch(`/api/leads/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: type }),
+        });
+        if (!res.ok) throw new Error(`Gagal menandai ${type}`);
+      }
+      toast.success(`Lead berhasil ${label}`);
       fetchLeads();
     } catch {
-      toast.error('Gagal menghapus lead');
+      toast.error(`Gagal ${label === 'dihapus' ? 'menghapus' : 'menandai ' + label} lead`);
     }
   };
 
@@ -713,6 +709,34 @@ export default function LeadsPage() {
               Simpan
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!confirmAction} onOpenChange={(open) => { if (!open) setConfirmAction(null); }}>
+        <DialogContent showCloseButton={false} className="sm:max-w-[360px]">
+          <DialogHeader>
+            <DialogTitle>
+              {confirmAction?.type === 'qualified' && 'Konfirmasi Qualified'}
+              {confirmAction?.type === 'unqualified' && 'Konfirmasi Unqualified'}
+              {confirmAction?.type === 'delete' && 'Konfirmasi Hapus'}
+            </DialogTitle>
+            <DialogDescription>
+              {confirmAction?.type === 'qualified' && 'Tandai lead ini sebagai Qualified? Lead akan otomatis masuk ke Pipeline.'}
+              {confirmAction?.type === 'unqualified' && 'Tandai lead ini sebagai Unqualified?'}
+              {confirmAction?.type === 'delete' && 'Yakin ingin menghapus lead ini? Tindakan ini tidak dapat dibatalkan.'}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmAction(null)}>Batal</Button>
+            <Button
+              variant={confirmAction?.type === 'delete' ? 'destructive' : 'default'}
+              onClick={executeConfirm}
+            >
+              {confirmAction?.type === 'qualified' && 'Qualified'}
+              {confirmAction?.type === 'unqualified' && 'Unqualified'}
+              {confirmAction?.type === 'delete' && 'Hapus'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
