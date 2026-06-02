@@ -70,6 +70,23 @@ export async function PATCH(req: Request) {
   }
 }
 
+export async function DELETE(req: Request) {
+  try {
+    const { dealId } = await req.json();
+    if (!dealId) {
+      return NextResponse.json({ error: 'dealId wajib diisi' }, { status: 400 });
+    }
+
+    await prisma.dealDocument.deleteMany({ where: { dealId } });
+    await prisma.deal.delete({ where: { id: dealId } });
+
+    return NextResponse.json({ success: true });
+  } catch (error: unknown) {
+    console.error('[PIPELINE DELETE]', error);
+    return NextResponse.json({ error: 'Gagal menghapus deal' }, { status: 500 });
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const { clientId, serviceId, stageId, assignedAeId, nilai, probability, notes, namaProject } = await req.json();

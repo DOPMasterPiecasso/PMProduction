@@ -40,21 +40,40 @@ export default function Dashboard() {
   const [data, setData] = useState<DashData | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const now = new Date();
+  const [year, setYear] = useState(now.getFullYear());
+  const [month, setMonth] = useState(now.getMonth());
+
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
+  const bulan = `${year}-${String(month + 1).padStart(2, '0')}`;
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/dashboard');
+      const res = await fetch(`/api/dashboard?bulan=${bulan}`);
       if (!res.ok) throw new Error();
       setData(await res.json());
     } catch { toast.error('Gagal memuat data'); }
     finally { setLoading(false); }
-  }, []);
+  }, [bulan]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const now = new Date();
-  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-  const monthLabel = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
+  function moveMonth(dir: number) {
+    let m = month + dir;
+    let y = year;
+    if (m < 0) { m = 11; y--; }
+    if (m > 11) { m = 0; y++; }
+    setMonth(m);
+    setYear(y);
+  }
+
+  function goToday() {
+    const n = new Date();
+    setYear(n.getFullYear());
+    setMonth(n.getMonth());
+  }
 
   if (loading) {
     return <div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>;
@@ -100,11 +119,14 @@ export default function Dashboard() {
       <div className="bg-white border border-black/[.07] rounded-xl shadow-sm px-3 md:px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div className="flex items-center gap-3">
           <div className="flex gap-1">
-            <button className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-100 text-gray-500"><ChevronLeft className="w-3.5 h-3.5" /></button>
-            <button className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-100 text-gray-500"><ChevronRight className="w-3.5 h-3.5" /></button>
+            <button onClick={() => moveMonth(-1)} className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-100 text-gray-500"><ChevronLeft className="w-3.5 h-3.5" /></button>
+            <button onClick={() => moveMonth(1)} className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-100 text-gray-500"><ChevronRight className="w-3.5 h-3.5" /></button>
           </div>
-          <span className="text-[14px] font-semibold">{monthLabel}</span>
-          <button className="text-[11px] px-2.5 py-1 rounded-md border border-black/10 hover:bg-gray-100">Hari ini</button>
+          <select value={month} onChange={(e) => setMonth(Number(e.target.value))} className="text-[14px] font-semibold bg-transparent border border-black/10 rounded-md px-2 py-1 cursor-pointer outline-none">
+            {monthNames.map((name, i) => <option key={i} value={i}>{name}</option>)}
+          </select>
+          <span className="text-[14px] text-gray-400 font-medium">{year}</span>
+          <button onClick={goToday} className="text-[11px] px-2.5 py-1 rounded-md border border-black/10 hover:bg-gray-100">Hari ini</button>
         </div>
         <div className="flex items-center gap-3 text-[11px] text-gray-500 flex-wrap">
           <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-500" />{data.alerts.fuOverdue} Overdue</span>
@@ -125,7 +147,7 @@ export default function Dashboard() {
           <div className="absolute top-0 left-0 right-0 h-[3px] bg-green-500" />
           <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Yearly Revenue</div>
           <div className="text-[18px] font-bold font-mono mt-1 text-green-600">{formatRp(data.yearlyRevenue)}</div>
-          <div className="text-[10px] text-green-600 mt-0.5">{now.getFullYear()} YTD</div>
+          <div className="text-[10px] text-green-600 mt-0.5">{year} YTD</div>
         </div>
         <div className="bg-white border border-black/[.07] rounded-xl shadow-sm px-4 py-3 relative overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-[3px] bg-red-500" />
@@ -160,7 +182,7 @@ export default function Dashboard() {
         {/* Revenue Bulanan */}
         <div className="bg-white border border-black/[.07] rounded-xl shadow-sm">
           <div className="px-4 py-3 border-b border-black/5">
-            <div className="text-[13px] font-semibold">Revenue Bulanan {now.getFullYear()}</div>
+            <div className="text-[13px] font-semibold">Revenue Bulanan {year}</div>
             <div className="text-[11px] text-gray-400 mt-0.5">Rp Juta - hanya Paid</div>
           </div>
           <div className="p-4">

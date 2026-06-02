@@ -318,6 +318,8 @@ function DealModal({
   const [showEdit, setShowEdit] = useState(false);
   const [confirmArchive, setConfirmArchive] = useState(false);
   const [archiving, setArchiving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [editForm, setEditForm] = useState({
     serviceId: deal.service?.id || '',
     nilai: String(deal.nilai),
@@ -400,6 +402,25 @@ function DealModal({
     } finally {
       setSaving(false);
       setUploading(false);
+    }
+  }
+
+  async function handleDelete() {
+    setDeleting(true);
+    try {
+      const res = await fetch('/api/pipeline', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dealId: deal.id }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success('Deal berhasil dihapus');
+      onUpdated();
+      onClose();
+    } catch {
+      toast.error('Gagal menghapus deal');
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -580,14 +601,22 @@ function DealModal({
         {/* Footer */}
         <div className="px-5 py-3 border-t border-black/[0.06] flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            {!confirmArchive ? (
-              <button
-                onClick={() => setConfirmArchive(true)}
-                className={`px-3 py-2 text-[11.5px] font-medium rounded-lg border transition-colors ${isArchived ? 'border-gray-200 text-gray-500 hover:bg-gray-50' : 'border-red-200 text-red-500 hover:bg-red-50'}`}
-              >
-                {isArchived ? 'Kembalikan' : 'Archive'}
-              </button>
-            ) : (
+            {!confirmArchive && !confirmDelete ? (
+              <>
+                <button
+                  onClick={() => setConfirmArchive(true)}
+                  className={`px-3 py-2 text-[11.5px] font-medium rounded-lg border transition-colors ${isArchived ? 'border-gray-200 text-gray-500 hover:bg-gray-50' : 'border-red-200 text-red-500 hover:bg-red-50'}`}
+                >
+                  {isArchived ? 'Kembalikan' : 'Archive'}
+                </button>
+                <button
+                  onClick={() => setConfirmDelete(true)}
+                  className="px-3 py-2 text-[11.5px] font-medium rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-colors"
+                >
+                  Hapus
+                </button>
+              </>
+            ) : confirmArchive ? (
               <div className="flex items-center gap-2">
                 <span className={`text-[11.5px] ${isArchived ? 'text-gray-600' : 'text-red-600'}`}>{isArchived ? 'Kembalikan deal ini?' : 'Arsipkan deal ini?'}</span>
                 <button
@@ -599,6 +628,23 @@ function DealModal({
                 </button>
                 <button
                   onClick={() => setConfirmArchive(false)}
+                  className="px-3 py-1.5 text-[11px] font-medium rounded-lg border border-black/[0.1] text-gray-500 hover:bg-gray-50"
+                >
+                  Batal
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="text-[11.5px] text-red-600">Hapus deal ini?</span>
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="px-3 py-1.5 text-[11px] font-medium rounded-lg bg-red-500 text-white hover:bg-red-600 disabled:opacity-60"
+                >
+                  {deleting ? '...' : 'Ya, Hapus'}
+                </button>
+                <button
+                  onClick={() => setConfirmDelete(false)}
                   className="px-3 py-1.5 text-[11px] font-medium rounded-lg border border-black/[0.1] text-gray-500 hover:bg-gray-50"
                 >
                   Batal

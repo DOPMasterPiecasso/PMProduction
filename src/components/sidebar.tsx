@@ -93,27 +93,23 @@ function NavSection({ label, children }: { label: string; children: React.ReactN
   );
 }
 
-function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
+function SidebarContent({ onNavClick, studioName, logoUrl }: { onNavClick?: () => void; studioName: string; logoUrl: string | null }) {
   const pathname = usePathname();
-  const [studioName, setStudioName] = useState("CreativeOS");
-
-  useEffect(() => {
-    fetch("/api/branding")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.studio_name) setStudioName(data.studio_name);
-      })
-      .catch(() => {});
-  }, []);
 
   return (
     <aside className="w-full bg-white flex flex-col h-full font-sans">
       {/* Logo */}
       <div className="pt-[16px] px-[14px] pb-[12px] border-b border-black/[.07] flex items-center gap-[9px]">
-        <div className="w-[30px] h-[30px] bg-[#18181B] rounded-[8px] flex items-center justify-center shrink-0">
-          <svg width="15" height="15" viewBox="0 0 24 24" stroke="white" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-          </svg>
+        <div className="w-[30px] h-[30px] rounded-[8px] flex items-center justify-center shrink-0 overflow-hidden">
+          {logoUrl ? (
+            <img src={logoUrl} alt={studioName} className="w-full h-full object-contain" />
+          ) : (
+            <div className="w-full h-full bg-[#18181B] flex items-center justify-center">
+              <svg width="15" height="15" viewBox="0 0 24 24" stroke="white" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+              </svg>
+            </div>
+          )}
         </div>
         <div>
           <div className="text-[14px] font-semibold tracking-[-0.3px] text-[#18181B]">{studioName}</div>
@@ -209,7 +205,19 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
 
 export function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [studioName, setStudioName] = useState("CreativeOS");
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const pathname = usePathname();
+
+  useEffect(() => {
+    fetch("/api/branding")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.studio_name) setStudioName(data.studio_name);
+        if (data.logo_url) setLogoUrl(data.logo_url);
+      })
+      .catch(() => {});
+  }, []);
 
   // Tutup drawer saat route berubah
   useEffect(() => {
@@ -220,7 +228,7 @@ export function Sidebar() {
     <>
       {/* ── Desktop sidebar ── */}
       <div className="hidden md:flex w-[218px] min-w-[218px] border-r border-black/[.07] h-full">
-        <SidebarContent />
+        <SidebarContent studioName={studioName} logoUrl={logoUrl} />
       </div>
 
       {/* ── Mobile: top header bar ── */}
@@ -233,10 +241,16 @@ export function Sidebar() {
           <Menu className="w-5 h-5" />
         </button>
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 bg-[#18181B] rounded-[6px] flex items-center justify-center shrink-0">
-            <svg width="12" height="12" viewBox="0 0 24 24" stroke="white" fill="none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-            </svg>
+          <div className="w-6 h-6 rounded-[6px] flex items-center justify-center shrink-0 overflow-hidden">
+            {logoUrl ? (
+              <img src={logoUrl} alt={studioName} className="w-full h-full object-contain" />
+            ) : (
+              <div className="w-full h-full bg-[#18181B] flex items-center justify-center">
+                <svg width="12" height="12" viewBox="0 0 24 24" stroke="white" fill="none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                </svg>
+              </div>
+            )}
           </div>
           <span className="text-[14px] font-semibold tracking-[-0.3px] text-[#18181B]">Sales OS</span>
         </div>
@@ -264,7 +278,7 @@ export function Sidebar() {
         >
           <X className="w-4 h-4" />
         </button>
-        <SidebarContent onNavClick={() => setMobileOpen(false)} />
+        <SidebarContent studioName={studioName} logoUrl={logoUrl} onNavClick={() => setMobileOpen(false)} />
       </div>
     </>
   );

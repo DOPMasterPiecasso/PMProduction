@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Loader2, Plus, Trash2, MessageSquare, RotateCcw, Upload } from 'lucide-react';
+import { Loader2, Plus, Trash2, MessageSquare, RotateCcw, Upload, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { DEFAULT_TEMPLATE_INVOICE, DEFAULT_TEMPLATE_PAYMENT } from '@/lib/whatsapp';
 
@@ -849,6 +849,52 @@ export default function SettingsPage() {
               </div>
             ))}
           </div>
+          {/* Branding - Logo & Favicon (satu upload) */}
+          <div className="mt-5 pt-5 border-t border-black/[0.06]">
+            <div className="text-[12.5px] font-semibold text-[#18181B] mb-3">Logo Program & Favicon</div>
+            <div className="flex items-center gap-4">
+              <div className="w-[60px] h-[60px] rounded-lg border border-black/10 bg-gray-50 flex items-center justify-center overflow-hidden shrink-0">
+                {systemSettings.logo_url ? (
+                  <img src={systemSettings.logo_url} alt="Logo" className="w-full h-full object-contain" />
+                ) : (
+                  <ImageIcon className="w-5 h-5 text-gray-300" />
+                )}
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="cursor-pointer text-[11px] px-3 py-1.5 rounded-lg border border-black/10 hover:bg-gray-100 text-gray-600 transition-colors w-fit">
+                  {systemSettings.logo_url ? 'Ganti Logo' : 'Upload Logo'}
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const f = e.target.files?.[0];
+                      if (!f) return;
+                      if (f.size > 2 * 1024 * 1024) { toast.error('File maksimal 2MB'); return; }
+                      const fd = new FormData();
+                      fd.append('file', f);
+                      fd.append('type', 'logo');
+                      try {
+                        const res = await fetch('/api/branding', { method: 'POST', body: fd });
+                        if (!res.ok) throw new Error();
+                        const data = await res.json();
+                        setSystemSettings((prev) => ({ ...prev, logo_url: data.url, favicon_url: data.url }));
+                        await fetch('/api/settings', {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ key: 'favicon_url', value: data.url }),
+                        });
+                        toast.success('Logo berhasil diupload');
+                      } catch { toast.error('Gagal upload logo'); }
+                      e.target.value = '';
+                    }}
+                  />
+                </label>
+                <div className="text-[10px] text-gray-400">PNG, JPG, SVG, WebP. Maks 2MB. Satu gambar dipakai untuk logo dan favicon.</div>
+              </div>
+            </div>
+          </div>
+
           <div className="mt-4 flex justify-end">
             <button onClick={handleSaveSettings} className="bg-[#18181B] text-white text-[12.5px] font-medium px-4 py-2 rounded-lg hover:opacity-85">
               Simpan Pengaturan

@@ -1,13 +1,24 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const bulanParam = searchParams.get('bulan');
+
+    let targetYear: number, targetMonth: number;
     const now = new Date();
-    const year = now.getFullYear();
-    const yearStart = new Date(`${year}-01-01`);
-    const monthStart = new Date(year, now.getMonth(), 1);
-    const monthEnd = new Date(year, now.getMonth() + 1, 1);
+    if (bulanParam && /^\d{4}-\d{2}$/.test(bulanParam)) {
+      targetYear = parseInt(bulanParam.split('-')[0]);
+      targetMonth = parseInt(bulanParam.split('-')[1]) - 1;
+    } else {
+      targetYear = now.getFullYear();
+      targetMonth = now.getMonth();
+    }
+
+    const yearStart = new Date(`${targetYear}-01-01`);
+    const monthStart = new Date(targetYear, targetMonth, 1);
+    const monthEnd = new Date(targetYear, targetMonth + 1, 1);
 
     // ── Monthly Revenue (paid invoices this month) ───────────
     const paidThisMonth = await prisma.invoice.findMany({
@@ -52,14 +63,14 @@ export async function GET() {
     const revenueByMonth: Record<string, number> = {};
     for (let i = 0; i < 12; i++) revenueByMonth[i] = 0;
     for (const inv of allPaid as { nominal: number; tanggalTerbit: Date }[]) {
-      if (inv.tanggalTerbit.getFullYear() === year) {
+      if (inv.tanggalTerbit.getFullYear() === targetYear) {
         revenueByMonth[inv.tanggalTerbit.getMonth()] += inv.nominal;
       }
     }
     const monthlyChart = Object.entries(revenueByMonth).map(([m, total]) => ({
       monthLabel: monthNames[parseInt(m)],
       total,
-      isCurrent: parseInt(m) === now.getMonth(),
+      isCurrent: parseInt(m) === targetMonth,
     }));
 
     // ── Revenue per Service (from won deals YTD) ─────────────
