@@ -5,7 +5,26 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   try {
     const { id } = await params;
     const body = await req.json();
-    const { namaInstitusi, namaContact, noHp, sourceId, serviceId, assignedToId, status, catatan } = body;
+    const { namaInstitusi, namaContact, noHp, sourceId, serviceId, assignedToId, status, catatan, clientId } = body;
+
+    const existingLead = await prisma.lead.findUnique({ where: { id } });
+
+    let resolvedClientId = clientId || existingLead?.clientId || null;
+
+    if (status === 'qualified' && !resolvedClientId) {
+      const nama = namaInstitusi?.trim() || existingLead?.namaInstitusi || '';
+      const newClient = await prisma.client.create({
+        data: {
+          namaKlien: nama,
+          namaContact: namaContact?.trim() || existingLead?.namaContact || null,
+          noHp: noHp?.trim() || existingLead?.noHp || null,
+          sourceId: sourceId || existingLead?.sourceId || null,
+          serviceId: serviceId || existingLead?.serviceId || null,
+          status: 'unqualified',
+        },
+      });
+      resolvedClientId = newClient.id;
+    }
 
     const lead = await prisma.lead.update({
       where: { id },
@@ -18,6 +37,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         assignedToId: assignedToId || null,
         status: status ?? undefined,
         catatan: catatan ?? undefined,
+        clientId: resolvedClientId || undefined,
       },
       include: {
         source: { select: { id: true, nama: true } },
@@ -26,10 +46,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       },
     });
 
-    // Auto-create deal when lead is qualified
-    if (status === 'qualified' && lead.clientId) {
+    if (status === 'qualified' && resolvedClientId) {
       const existingDeal = await prisma.deal.findFirst({
-        where: { clientId: lead.clientId, serviceId: lead.serviceId, dealStatus: { notIn: ['archived', 'won'] } },
+        where: { clientId: resolvedClientId, serviceId: lead.serviceId, dealStatus: { notIn: ['archived', 'won'] } },
       });
       if (!existingDeal) {
         const firstStage = await prisma.pipelineStage.findFirst({
@@ -39,7 +58,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         if (firstStage) {
           await prisma.deal.create({
             data: {
-              clientId: lead.clientId,
+              clientId: resolvedClientId,
               serviceId: lead.serviceId,
               assignedAeId: lead.assignedToId,
               stageId: firstStage.id,

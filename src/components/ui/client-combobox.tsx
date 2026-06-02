@@ -33,15 +33,6 @@ export function ClientCombobox({
   className,
 }: ClientComboboxProps) {
   const [open, setOpen] = React.useState(false)
-  const prevValueRef = React.useRef(selectedClientId)
-
-  React.useEffect(() => {
-    if (prevValueRef.current !== selectedClientId) {
-      prevValueRef.current = selectedClientId
-    }
-  }, [selectedClientId])
-
-  const selectedClient = clients.find((c) => c.id === selectedClientId)
 
   return (
     <Combobox.Root
@@ -53,6 +44,16 @@ export function ClientCombobox({
         }
       }}
       onOpenChange={setOpen}
+      onInputValueChange={(val, details) => {
+        if (details?.reason === 'inputChange') {
+          onInputChange?.(val)
+        }
+      }}
+      itemToStringLabel={(id) => {
+        if (typeof id !== 'string') return ''
+        const client = clients.find((c) => c.id === id)
+        return client ? client.namaKlien : id
+      }}
       autoHighlight
     >
 
@@ -68,12 +69,6 @@ export function ClientCombobox({
             placeholder={placeholder}
             className="w-full bg-transparent py-2 pr-1 text-[12px] outline-none placeholder:text-gray-300"
             onFocus={() => setOpen(true)}
-            onInput={(e) => {
-              const val = (e.target as HTMLInputElement).value
-              if (!selectedClientId) {
-                onInputChange?.(val)
-              }
-            }}
           />
         </div>
         <button

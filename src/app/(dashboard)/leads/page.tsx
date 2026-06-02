@@ -50,6 +50,7 @@ interface Lead {
   status: string;
   tanggalMasuk: string;
   catatan: string | null;
+  clientId: string | null;
   source: Source | null;
   service: Service | null;
   assignedTo: User | null;
@@ -387,7 +388,7 @@ export default function LeadsPage() {
       assignedToId: lead.assignedTo?.id || '',
       status: lead.status,
       catatan: lead.catatan || '',
-      clientId: '',
+      clientId: lead.clientId || '',
     });
     setDialogOpen(true);
   };
